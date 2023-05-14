@@ -11,14 +11,29 @@ from config import *
 
 bot = telebot.TeleBot(Token)
 
+keyb_start = types.InlineKeyboardMarkup()
+keyb_start.add(*(types.InlineKeyboardButton('Меню', callback_data='menu'),
+                 types.InlineKeyboardButton('Рабочая зона', callback_data='work')))
+
+keyb_menu = types.InlineKeyboardMarkup()
+k
+
+
+# keyd.add(*(types.KeyboardButton(a[0]) for a in list_of_lists[1:]))
+
 
 @bot.message_handler(content_types=['text'])
 def start(message):
-    if message.text == '/start':
-        if message.chat.id in config.users:
-            bot.send_message(message.chat.id, 'hellow')
+    if message.chat.id in config.super_admin:
+        if message.text == '/start':
+            # if message.chat.id in config.users:
+            bot.send_message(message.chat.id, 'hellow', reply_markup=keyb_start)
 
 
+@bot.callback_query_handler(func=lambda call: True)
+def query_handler(call):
+    if call.data == 'menu':
+        bot.send_message(call.from_user.id, 'hellow', reply_markup=keyb_start)
 
 
 # @bot.message_handler(content_types=['text'])
