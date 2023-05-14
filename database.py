@@ -29,9 +29,10 @@ with con:
             user_id INTEGER,
             comment_to_order TEXT,
             address TEXT,
-            is_canceled BOOLEAN ,
-            is_done BOOLEAN ,
-            is_start_cook BOOLEAN);
+            is_canceled BOOLEAN DEFAULT 0,
+            is_done BOOLEAN DEFAULT 0,
+            is_start_cook BOOLEAN DEFAULT 0,
+            is_cooked BOOLEAN DEFAULT 0);
     """)
 
 with con:
@@ -51,7 +52,7 @@ with con:
             category_id INTEGER,
             picture BLOB ,
             time_of_cook INTEGER ,
-            is_stop BOOLEAN);
+            is_stop BOOLEAN DEFAULT 0);
     """)
 
 with con:
@@ -60,7 +61,7 @@ with con:
             id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
             name TEXT,
             description TEXT,
-            is_stop BOOLEAN);
+            is_stop BOOLEAN DEFAULT 0);
     """)
 
 def registration(dict_):
@@ -209,59 +210,195 @@ def show_dish(name_cat):
     except Exception as e:
         print(e)
 
-print(show_dish("desert"))
+# print(show_dish("Десерты"))
+
+def for_cook():
+    '''
+    функция ищет заказы которые не начались готовиться берет номер заказа и список блюд с количеством и выводит текстом
+    после этого везде заменяет на то что началось готовиться is_start_cook= True
+    :return:
+    '''
+    with con:
+        data = con.execute(f'''SELECT  Orders.id, Dish.name, Order_dish.count  FROM Dish 
+                                        JOIN Order_dish ON 
+                                        Dish.id = Order_dish.dish_id 
+                                        JOIN Orders ON 
+                                        Order_dish.order_id = Orders.id  
+                                        WHERE Orders.is_start_cook = 0 ''')
+        data = data.fetchall() # данные повару первая цифра номер заказа потом блюдо и количество
+        orders_ids = []
+        for i in data:
+            orders_ids.append(i[0])
+        orders_ids = set(orders_ids) # id заказов чтобы обозначить что началось готовиться
+        orders_ids = tuple(orders_ids)
+        try:
+            orderdish = f"UPDATE Orders SET is_start_cook = 1 WHERE Id IN {orders_ids}"
+            with con:
+                con.execute(orderdish)
+        except Exception as e:
+            print("Ошибка: ", e)
+        return data
+# print(for_cook())
+
+def for_dostavka(order_id):
+    '''
+    :param order_id:
+    :return: записывает is_cooked = True, и передает всю нужную информацию доставщику
+    '''
+    # заменяет на то что уже готово
+    try:
+        orderdish = f"UPDATE Orders SET is_cooked = 1 WHERE Id = '{order_id}'"
+        with con:
+            con.execute(orderdish)
+    except Exception as e:
+        print("Ошибка: ", e)
+    # формирование информации для доставщика
+    try:
+        with con:
+            data = con.execute(f'''SELECT  Orders.id, Orders.address,Orders.comment_to_order, 
+                                            User.phone_number, SUM(Order_dish.count*Dish.costs)
+                                            FROM User 
+                                            JOIN Orders ON 
+                                            User.id = Orders.user_id 
+                                            JOIN Order_dish ON 
+                                            Orders.id = Order_dish.order_id  
+                                            JOIN Dish ON 
+                                            Dish.id = Order_dish.dish_id
+                                            WHERE Orders.id = {order_id}''')
+            data = data.fetchall()
+
+    except Exception as e:
+        print(e)
+    # запрос на все заказанные блюда с количеством
+    try:
+        with con:
+            data1 = con.execute(f'''SELECT Dish.name,Order_dish.count FROM Dish 
+                                                JOIN Order_dish ON 
+                                                Dish.id = Order_dish.dish_id 
+                                                WHERE Order_dish.order_id = {order_id}''')
+            data1 = data1.fetchall()
+    except Exception as e:
+        print(e)
+    dishes = []
+    for i in data1:
+        for d in i:
+            dishes.append(d)
+    text_dict = {} # Текст для доставщика
+    for i in data:
+        text_dict["id заказа"] = i[0]
+        text_dict["адрес"] = i[1]
+        text_dict["комментарий"] = i[2]
+        text_dict["номер телефона"] = i[3]
+        text_dict["стоимость заказа"] = i[4]
+        text_dict["блюда"] = dishes
+    return  text_dict
+# print(for_dostavka(2))
 
 
+def is_done(order_id):
+    '''
+    :param order_id:  номер заказа
+    :return: отмечает is-done = True ==> заказ доставлен
+    '''
+    try:
+        orderdish = f"UPDATE Orders SET is_done = 1 WHERE Id = '{order_id}'"
+        with con:
+            con.execute(orderdish)
+        return True
+    except Exception as e:
+        print("Ошибка: ", e)
+# print(is_done(1))
 
-# def add_cat():
-#     try:
-#         sql_insert = f"INSERT INTO CategoryDish (name,is_stop) values(?,?)"
-#         with con:
-#             con.execute(sql_insert,("Fruits",True))
-#         return True
-#     except:
-#         return False
-#
-# print(add_cat())
+def is_canceled(order_id):
+    '''
+
+    :param order_id:
+    :return: ставит галочку is_canceled, что заказ отменен возвращает номер заказа
+    '''
+    try:
+        orderdish = f"UPDATE Orders SET is_canceled = 1 WHERE Id = '{order_id}'"
+        with con:
+            con.execute(orderdish)
+        return order_id
+    except Exception as e:
+        print("Ошибка: ", e)
+# print(is_canceled(1))
+
+def cat_is_stop(name_cat, word):
+    '''
+    :param name_cat:
+    :param word: если стоп то меняет is_stop = 1, если другое то возвращает 0 и говорит что категория доступна
+    :return:
+    '''
+    if word == "стоп":
+        try:
+            orderdish = f"UPDATE CategoryDish SET is_stop = 1 WHERE name = '{name_cat}'"
+            with con:
+                con.execute(orderdish)
+            return True
+        except Exception as e:
+            print("Ошибка: ", e)
+    else:
+        try:
+            orderdish = f"UPDATE CategoryDish SET is_stop = 0 WHERE name = '{name_cat}'"
+            with con:
+                con.execute(orderdish)
+            return True
+        except Exception as e:
+            print("Ошибка: ", e)
+# print(cat_is_stop("Десерты", "нестоп"))
+
+def dish_is_stop(name_dish, word):
+    '''
+    :param name_cat:
+    :param word: если стоп то меняет is_stop = 1, если другое то возвращает 0 и говорит что блюдо доступна
+    :return:
+    '''
+    if word == "стоп":
+        try:
+            orderdish = f"UPDATE Dish SET is_stop = 1 WHERE name = '{name_dish}'"
+            with con:
+                con.execute(orderdish)
+            return True
+        except Exception as e:
+            print("Ошибка: ", e)
+    else:
+        try:
+            orderdish = f"UPDATE Dish SET is_stop = 0 WHERE name = '{name_dish}'"
+            with con:
+                con.execute(orderdish)
+            return True
+        except Exception as e:
+            print("Ошибка: ", e)
+# print(dish_is_stop("Мороженное", "стоп"))
 
 
-
-# def add_dish():
-#     try:
-#         sql_insert = f"INSERT INTO Dish (name,time_of_cook) values(?,?)"
-#         with con:
-#             con.execute(sql_insert,("Banan",10))
-#         return True
-#     except:
-#         return False
-
-#
-# def info_table():# функция берет название таблицы и возвращает ее полность #работает
-#     with con:
-#         data = con.execute(f"SELECT * FROM Order_dish")
-#         # print(data)
-#         # print(data.fetchall())
-#         return data.fetchall()
-# print(add_dish())
-# print(info_table())
-
-# def ss():
-#     time = con.execute(f'''SELECT Order_dish.count * Dish.time_of_cook
-#                             FROM Order_dish
-#                             INNER JOIN Dish ON Order_dish.dish_id = dish.id
-#                             WHERE Order_dish.order_id = {16}''')
-#     time = time.fetchall()
-#     all_time = 0
-#     for s in time:
-#         for k in s:
-#             all_time+=k
-#     all_time+=30
-#     if all_time>60:
-#         hours = all_time // 60
-#         minutes = all_time % 60
-#
-#         time_of_cook =f"{hours} часов {minutes} минут"
-#     return a
-#
-# print(ss())
-
+def menu_main():
+    '''
+    :return: генерирует словарь типа {категория:[[все о блюде 1],[все о блюде 2]]}
+    '''
+    try:
+        with con:
+            data = con.execute(f'''SELECT CategoryDish.name, Dish.id,Dish.name,Dish.picture,Dish.costs 
+                                    FROM CategoryDish
+                                    JOIN Dish ON 
+                                    Dish.category_id = CategoryDish.id
+                                    WHERE CategoryDish.is_stop = 0 AND Dish.is_stop = 0 ''')
+            data = data.fetchall()
+            #return data
+    except Exception as e:
+        print(e)
+    menu = {}
+    for i in data:
+        if i[0] not in menu.keys():
+            a = []
+            for s in i[1:]:
+                a.append(s)
+            menu[i[0]] = [a]
+        else:
+            a = []
+            for s in i[1:]:
+                a.append(s)
+            menu[i[0]].append(a)
+    return menu
+print(menu_main())
