@@ -379,7 +379,7 @@ def menu_main():
     '''
     try:
         with con:
-            data = con.execute(f'''SELECT CategoryDish.name, Dish.id,Dish.name,Dish.picture,Dish.costs 
+            data = con.execute(f'''SELECT CategoryDish.name, Dish.id,Dish.name,Dish.picture,Dish.costs,Dish.ingridients
                                     FROM CategoryDish
                                     JOIN Dish ON 
                                     Dish.category_id = CategoryDish.id
