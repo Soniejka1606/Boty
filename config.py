@@ -1,6 +1,6 @@
-Token = '6236696473:AAH_OGgS5jBhtDC7ZRA8lJwXHHZkQCfxZwg'
-# all_id_dict = {'super_admin': [], 'admin': [], 'users': []}
 
+# all_id_dict = {'super_admin': [], 'admin': [], 'users': []}
+id_admin = {'super_admin': [-891527106], 'dostavka': [-945349982], 'povars': [-813101250]}
 menu = {'Мангал': [['Шашлык', '100', 'img/Шашлык.jpg', 'Свинина, лук'],
                    ['Крылышки Барбекью', '200', 'img/Крылышки.jpg', 'Курица, чеснок'],
                    ['Люля кебаба', '200', 'img/Люля.jpeg', 'Говядина, помидоры']],
