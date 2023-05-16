@@ -208,18 +208,18 @@ def query_handler(call):
                              reply_markup=next(1, 1))
     elif call.data == 'category':
         # прописать через if
-        bot.send_message(call.from_user.id, 'Выберите, что хотите сделать ', reply_markup=stop_or_run(call.data))
+        bot.send_message(call.message.chat.id, 'Выберите, что хотите сделать ', reply_markup=stop_or_run(call.data))
     elif call.data == 'dish':
         # прописать через if
-        bot.send_message(call.from_user.id, 'Выберите, что хотите сделать ', reply_markup=stop_or_run(call.data))
+        bot.send_message(call.message.chat.id, 'Выберите, что хотите сделать ', reply_markup=stop_or_run(call.data))
     elif call.data == 'dish_stop' or call.data == 'dish_run':
         # прописать через if
         text = 'Введите название блюда'
-        a = bot.send_message(call.from_user.id, text)
+        a = bot.send_message(call.message.chat.id, text)
     elif call.data == 'cat_stop' or call.data == 'cat_run':
         # прописать через if
         text = 'Введите название категории'
-        a = bot.send_message(call.from_user.id, text)
+        a = bot.send_message(call.message.chat.id, text)
         bot.register_next_step_handler(a, cat_stop, call.data)
 
 
