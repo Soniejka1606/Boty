@@ -8,6 +8,7 @@ from telebot import types
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup
 from telebot.types import InputMediaPhoto
 from config import *
+from database import for_dostavka
 
 bot = telebot.TeleBot('6236696473:AAH_OGgS5jBhtDC7ZRA8lJwXHHZkQCfxZwg')
 """Все id"""
@@ -99,7 +100,7 @@ def keyb_admin():
     return keyb_admin
 
 
-def stop_or_run(word):
+def stop_or_run(word=0):
     if word == "category":
         keyb_admin = types.InlineKeyboardMarkup()
         b1 = types.InlineKeyboardButton(text="стоп", callback_data="cat_stop")
@@ -116,9 +117,6 @@ def stop_or_run(word):
 
 
 """"""
-
-
-# keyd.add(*(types.KeyboardButton(a[0]) for a in list_of_lists[1:]))
 
 
 @bot.message_handler(content_types=['text'])
@@ -182,6 +180,43 @@ def password(message):
         bot.send_message(message.chat.id, "Для начала заказа нажмите меню", reply_markup=keyb_start_users)
 
 
+def next_step(message):
+    print("next run")
+    if message.chat.id in config.id_admin['povars']:
+        print(message.text)
+        # прописать через if
+        dict_info = for_dostavka(message.text)
+        bot.send_message(id_admin['dostavka'][0], dict_info)
+        print(dict_info)
+        tekst = 'Если хотите отметить сделанным еще заказ нажмите на кнопку "Заказ сделан"'
+        bot.send_message(message.chat.id, tekst, reply_markup=next())
+    elif message.chat.id in config.id_admin['dostavka']:
+        tekst = 'Если хотите отметить сделанным еще заказ нажмите на кнопку "Заказ сделан"'
+        bot.send_message(message.chat.id, tekst, reply_markup=next(0, 1))
+
+
+def cat_stop(message, word):
+    if word == 'cat_stop':
+        # cat_is_stop(message.text, "стоп")
+        tekst = 'Если хотите отметить что-то еще выберите нужно'
+        bot.send_message(message.chat.id, tekst, reply_markup=keyb_admin())
+    else:
+        # cat_is_stop(message.text)
+        tekst = 'Если хотите отметить что-то еще выберите нужно'
+        bot.send_message(message.chat.id, tekst, reply_markup=keyb_admin())
+
+
+def dish_stop(message, word):
+    if word == 'dish_stop':
+        # dish_is_stop(message.text, "стоп")
+        tekst = 'Если хотите отметить что-то еще выберите нужно'
+        bot.send_message(message.chat.id, tekst, reply_markup=keyb_admin())
+    else:
+        # dish_is_stop(message.text)
+        tekst = 'Если хотите отметить что-то еще выберите нужно'
+        bot.send_message(message.chat.id, tekst, reply_markup=keyb_admin())
+
+
 @bot.callback_query_handler(func=lambda call: True)
 def query_handler(call):
     if call.data == 'menu':
@@ -216,6 +251,7 @@ def query_handler(call):
         # прописать через if
         text = 'Введите название блюда'
         a = bot.send_message(call.message.chat.id, text)
+        bot.register_next_step_handler(a, dish_stop, call.data)
     elif call.data == 'cat_stop' or call.data == 'cat_run':
         # прописать через if
         text = 'Введите название категории'
@@ -223,44 +259,6 @@ def query_handler(call):
         bot.register_next_step_handler(a, cat_stop, call.data)
 
 
-def next_step(message):
-    print(message.text)
-    # прописать через if
-    # for_dostavka(message.text) тут сразу инфа будет для доставщика то есть это нао будет отправить в айди группы с доставщиками
-    tekst = 'Если хотите отметить сделанным еще заказ нажмите на кнопку "Заказ сделан"'
-    bot.send_message(message.chat.id, tekst, reply_markup=next())
-    # # print("next run")
-    # # if message.chat.id in config.id_admin['povars']:
-    #     print(message.text)
-    #     # прописать через if
-    #     # for_dostavka(message.text) тут сразу инфа будет для доставщика то есть это нао будет отправить в айди группы с доставщиками
-    #     tekst = 'Если хотите отметить сделанным еще заказ нажмите на кнопку "Заказ сделан"'
-    #     bot.send_message(message.chat.id, tekst, reply_markup=next())
-    # elif message.chat.id in config.id_admin['dostavka']:
-    #     tekst = 'Если хотите отметить сделанным еще заказ нажмите на кнопку "Заказ сделан"'
-    #     bot.send_message(message.chat.id, tekst, reply_markup=next(0, 1))
-
-
-def cat_stop(message, word):
-    if word == 'cat_stop':
-        # cat_is_stop(message.text, "стоп")
-        tekst = 'Если хотите отметить что-то еще выберите нужно'
-        bot.send_message(message.chat.id, tekst, reply_markup=keyb_admin())
-    else:
-        # cat_is_stop(message.text)
-        tekst = 'Если хотите отметить что-то еще выберите нужно'
-        bot.send_message(message.chat.id, tekst, reply_markup=keyb_admin())
-
-
-def dish_stop(message, word):
-    if word == 'dish_stop':
-        # dish_is_stop(message.text, "стоп")
-        tekst = 'Если хотите отметить что-то еще выберите нужно'
-        bot.send_message(message.chat.id, tekst, reply_markup=keyb_admin())
-    else:
-        # dish_is_stop(message.text)
-        tekst = 'Если хотите отметить что-то еще выберите нужно'
-        bot.send_message(message.chat.id, tekst, reply_markup=keyb_admin())
 
 
 """ADMINKA"""
