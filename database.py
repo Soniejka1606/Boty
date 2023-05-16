@@ -324,7 +324,7 @@ def is_canceled(order_id):
         print("Ошибка: ", e)
 # print(is_canceled(1))
 
-def cat_is_stop(name_cat, word):
+def cat_is_stop(name_cat, word = "run"):
     '''
     :param name_cat:
     :param word: если стоп то меняет is_stop = 1, если другое то возвращает 0 и говорит что категория доступна
@@ -348,7 +348,7 @@ def cat_is_stop(name_cat, word):
             print("Ошибка: ", e)
 # print(cat_is_stop("Десерты", "нестоп"))
 
-def dish_is_stop(name_dish, word):
+def dish_is_stop(name_dish, word = "run"):
     '''
     :param name_cat:
     :param word: если стоп то меняет is_stop = 1, если другое то возвращает 0 и говорит что блюдо доступна
