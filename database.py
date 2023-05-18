@@ -9,7 +9,7 @@ HAVING ('условие/фильтрация на уровне сгруппир�
 ORDER BY ('столбец, по которому хотим отсортировать вывод; необязательно')
 """
 
-con = sl.connect('DATABASE.db',check_same_thread=False)
+con = sl.connect('DATABASE.db', check_same_thread=False)
 
 with con:
     con.execute("""
@@ -64,6 +64,7 @@ with con:
             is_stop BOOLEAN DEFAULT 0);
     """)
 
+
 def registration(dict_):
     #  функция принимает в качестве аргумента словарь со значениями, возвращает TRUE при успехе или ошибку при ошибке
     """
@@ -76,7 +77,7 @@ def registration(dict_):
         try:
             sql_insert = f"INSERT INTO User (name,phone_number,password,tg_id) values(?,?,?,?)"
             with con:
-                con.execute(sql_insert,(dict_["name"],dict_["phone_number"],dict_["password"],dict_["tg_id"]))
+                con.execute(sql_insert, (dict_["name"], dict_["phone_number"], dict_["password"], dict_["tg_id"]))
             return True
         except:
             return False
@@ -84,21 +85,22 @@ def registration(dict_):
         try:
             sql_insert = f"INSERT INTO User (name,phone_number,password,vk_id) values(?,?,?,?)"
             with con:
-                con.execute(sql_insert,(dict_["name"],dict_["phone_number"],dict_['password'],dict_["vk_id"]))
+                con.execute(sql_insert, (dict_["name"], dict_["phone_number"], dict_['password'], dict_["vk_id"]))
             return True
         except:
             return False
 
+
 # registration({"tg_id": 515215,"name": "KAtya","phone_number":55525,"password":"drftgyhfdfgg"})
 
-def ordering(order_dish,order_addreess,id):
+def ordering(order_dish, order_addreess, id):
     """
     функция значала заполняет таблицу Orders по адресу и user_id
     потом OrderDish
     :param order_dish, order_addreess,id - cловари {tg_id:fhjmgjmgj}
     :return: заполненные таблицы плюс время ожидание заказа в переменной time
     """
-    #забираем с таблицы user значение user_id
+    # забираем с таблицы user значение user_id
     if "tg_id" in id.keys():
         try:
             data = con.execute(f"SELECT id FROM User WHERE tg_id={id['tg_id']}")
@@ -119,14 +121,14 @@ def ordering(order_dish,order_addreess,id):
                     user_id = k
         except:
             return False
-    #добавляем адресс и user_id в таблицум Orders, формируя заказ для получения его номера
+    # добавляем адресс и user_id в таблицум Orders, формируя заказ для получения его номера
     try:
         sql_insert = f"INSERT INTO Orders (user_id,address) values(?,?)"
         with con:
-            con.execute(sql_insert,(user_id,order_addreess["address"]))
+            con.execute(sql_insert, (user_id, order_addreess["address"]))
     except:
         return False
-    #поиск последнего добавленного заказа по user_id, находим order_id, чтобы потом заполнять OrderDish
+    # поиск последнего добавленного заказа по user_id, находим order_id, чтобы потом заполнять OrderDish
     try:
         order_id = con.execute(f"SELECT id FROM Orders WHERE user_id={user_id} ORDER BY id DESC LIMIT 1")
         order_id = order_id.fetchall()
@@ -136,7 +138,7 @@ def ordering(order_dish,order_addreess,id):
     except:
         return False
     # заполнение OrderDish поля order_id,dish,count
-    for dish,count in order_dish.items():
+    for dish, count in order_dish.items():
         dish_id = con.execute(f"SELECT id FROM Dish WHERE name='{dish}'")
         dish_id = dish_id.fetchall()
         for i in dish_id:
@@ -144,14 +146,14 @@ def ordering(order_dish,order_addreess,id):
                 dish_id = k
         # return dish_id
         try:
-            print(dish_id,count,order_id)
+            print(dish_id, count, order_id)
             orderdish = f"INSERT INTO Order_dish (dish_id,count,order_id) values(?,?,?)"
             with con:
-                con.execute(orderdish, (dish_id,count,order_id))
+                con.execute(orderdish, (dish_id, count, order_id))
         except Exception as e:
             print("Ошибка: ", e)
             return False
-    #подсчет времени на готовку
+    # подсчет времени на готовку
     time = con.execute(f'''SELECT Order_dish.count * Dish.time_of_cook
                                 FROM Order_dish
                                 INNER JOIN Dish ON Order_dish.dish_id = dish.id
@@ -168,6 +170,7 @@ def ordering(order_dish,order_addreess,id):
 
         time_of_cook = f"{hours} часов {minutes} минут"
     return time_of_cook
+
 
 # print(ordering({"Kokos":2,"Banan":2},{'address':"Minskaya"},{'tg_id':515215}))
 
@@ -187,6 +190,7 @@ def show_category():
         return list_cat
     except Exception as e:
         print(e)
+
 
 # print(show_category())
 
@@ -210,6 +214,7 @@ def show_dish(name_cat):
     except Exception as e:
         print(e)
 
+
 # print(show_dish("Десерты"))
 
 def for_cook():
@@ -225,11 +230,11 @@ def for_cook():
                                         JOIN Orders ON 
                                         Order_dish.order_id = Orders.id  
                                         WHERE Orders.is_start_cook = 0 ''')
-        data = data.fetchall() # данные повару первая цифра номер заказа потом блюдо и количество
+        data = data.fetchall()  # данные повару первая цифра номер заказа потом блюдо и количество
         orders_ids = []
         for i in data:
             orders_ids.append(i[0])
-        orders_ids = set(orders_ids) # id заказов чтобы обозначить что началось готовиться
+        orders_ids = set(orders_ids)  # id заказов чтобы обозначить что началось готовиться
         orders_ids = tuple(orders_ids)
         try:
             orderdish = f"UPDATE Orders SET is_start_cook = 1 WHERE Id IN {orders_ids}"
@@ -238,6 +243,8 @@ def for_cook():
         except Exception as e:
             print("Ошибка: ", e)
         return data
+
+
 # print(for_cook())
 
 def for_dostavka(order_id):
@@ -283,15 +290,19 @@ def for_dostavka(order_id):
     for i in data1:
         for d in i:
             dishes.append(d)
-    text_dict = {} # Текст для доставщика
+    text_dict = {}  # Текст для доставщика
+    data_text = ''
     for i in data:
-        text_dict["id заказа"] = i[0]
-        text_dict["адрес"] = i[1]
-        text_dict["комментарий"] = i[2]
-        text_dict["номер телефона"] = i[3]
-        text_dict["стоимость заказа"] = i[4]
-        text_dict["блюда"] = dishes
-    return  text_dict
+        data_text += "id заказа - " + str(i[0]) + '\n'
+        data_text += "адрес - " + str(i[1]) + '\n'
+        data_text += "комментарий - " + str(i[2]) + '\n'
+        data_text += "номер телефона - " + str(i[3]) + '\n'
+        data_text += "стоимость заказа - " + str(i[4]) + '\n'
+        data_text += "блюда - " + str(dishes)+"."
+
+    return data_text
+
+
 # print(for_dostavka(2))
 
 
@@ -307,6 +318,8 @@ def is_done(order_id):
         return True
     except Exception as e:
         print("Ошибка: ", e)
+
+
 # print(is_done(1))
 
 def is_canceled(order_id):
@@ -322,9 +335,11 @@ def is_canceled(order_id):
         return order_id
     except Exception as e:
         print("Ошибка: ", e)
+
+
 # print(is_canceled(1))
 
-def cat_is_stop(name_cat, word = "run"):
+def cat_is_stop(name_cat, word="run"):
     '''
     :param name_cat:
     :param word: если стоп то меняет is_stop = 1, если другое то возвращает 0 и говорит что категория доступна
@@ -346,9 +361,11 @@ def cat_is_stop(name_cat, word = "run"):
             return True
         except Exception as e:
             print("Ошибка: ", e)
+
+
 # print(cat_is_stop("Десерты", "нестоп"))
 
-def dish_is_stop(name_dish, word = "run"):
+def dish_is_stop(name_dish, word="run"):
     '''
     :param name_cat:
     :param word: если стоп то меняет is_stop = 1, если другое то возвращает 0 и говорит что блюдо доступна
@@ -370,6 +387,8 @@ def dish_is_stop(name_dish, word = "run"):
             return True
         except Exception as e:
             print("Ошибка: ", e)
+
+
 # print(dish_is_stop("Мороженное", "стоп"))
 
 
@@ -385,7 +404,7 @@ def menu_main():
                                     Dish.category_id = CategoryDish.id
                                     WHERE CategoryDish.is_stop = 0 AND Dish.is_stop = 0 ''')
             data = data.fetchall()
-            #return data
+            # return data
     except Exception as e:
         print(e)
     menu = {}
@@ -401,4 +420,4 @@ def menu_main():
                 a.append(s)
             menu[i[0]].append(a)
     return menu
-print(menu_main())
+# print(menu_main())
