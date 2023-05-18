@@ -66,6 +66,7 @@ with con:
 
 
 def registration(dict_):
+    print(dict_)
     #  функция принимает в качестве аргумента словарь со значениями, возвращает TRUE при успехе или ошибку при ошибке
     """
     :param Словарь:
@@ -290,7 +291,7 @@ def for_dostavka(order_id):
     # print(f'data ----- {data1}')
     dish_list = ':\n'
     for i in data1:
-        dish_list+=  f' {i[0]} в количестве {i[1]} шт \n '
+        dish_list += f' {i[0]} в количестве {i[1]} шт \n '
         # for d in i:
         #     # print(d)
         #     # dish_list += f'{d}  шт \n'
@@ -304,7 +305,7 @@ def for_dostavka(order_id):
         data_text += "комментарий - " + str(i[2]) + '\n'
         data_text += "номер телефона - " + str(i[3]) + '\n'
         data_text += "стоимость заказа - " + str(i[4]) + 'руб. \n'
-        data_text += "блюда" + str(dish_list)+"--------"
+        data_text += "блюда" + str(dish_list) + "--------"
 
     return data_text
 
@@ -408,7 +409,7 @@ def menu_main():
     '''
     try:
         with con:
-            data = con.execute(f'''SELECT CategoryDish.name, Dish.id,Dish.name,Dish.picture,Dish.costs,Dish.ingridients
+            data = con.execute(f'''SELECT CategoryDish.name, Dish.id,Dish.name,Dish.picture,Dish.costs,Dish.ingridients,Dish.time_of_cook
                                     FROM CategoryDish
                                     JOIN Dish ON 
                                     Dish.category_id = CategoryDish.id
