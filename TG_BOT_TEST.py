@@ -8,7 +8,7 @@ from telebot import types
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup
 from telebot.types import InputMediaPhoto
 from config import *
-from database import for_dostavka
+from database import *
 
 bot = telebot.TeleBot('6236696473:AAH_OGgS5jBhtDC7ZRA8lJwXHHZkQCfxZwg')
 """Все id"""
@@ -121,7 +121,15 @@ def stop_or_run(word=0):
 
 @bot.message_handler(content_types=['text'])
 def start(message):
-    print(message.chat.id)
+    # print(message.chat.id)
+    # print(message.from_user.id)
+    if message.text == '/update' and message.chat.id in config.id_admin['super_admin']:
+        a = menu_main() #надо будет исходя из этого обновить config.menu
+        bot.send_message(message.chat.id, f'Обновленная информация выглядит так {str(a)}')
+    if message.text == 'Запиши' and message.chat.id in config.id_admin['dostavka']:
+        if message.from_user.id not in members_of_dostavka:
+            members_of_dostavka.append(message.from_user.id)
+            bot.send_message(message.chat.id, 'Спасибо, что присоеденились в группу "Доставка"')
     if message.text == '/start':
         if message.chat.id not in id_all:
             bot.send_message(message.chat.id, 'hellow')
@@ -181,14 +189,18 @@ def password(message):
 
 
 def next_step(message):
-    print("next run")
+    # print("next run")
     if message.chat.id in config.id_admin['povars']:
-        print(message.text)
+        # print(message.text)
         # прописать через if
         dict_info = for_dostavka(message.text)
+        # print(dict_info.split()[3])
+        keyb11 = types.InlineKeyboardMarkup()
+        b1 = types.InlineKeyboardButton(text="Принять", callback_data=dict_info.split()[3])
+        keyb11.add(b1)
 
-        bot.send_message(id_admin['dostavka'][0], dict_info)
-        print(dict_info)
+        bot.send_message(id_admin['dostavka'][0], dict_info, reply_markup=keyb11)
+        # print(dict_info)
         tekst = 'Если хотите отметить сделанным еще заказ нажмите на кнопку "Заказ сделан"'
         bot.send_message(message.chat.id, tekst, reply_markup=next())
     elif message.chat.id in config.id_admin['dostavka']:
@@ -197,25 +209,57 @@ def next_step(message):
 
 
 def cat_stop(message, word):
+    #Нужна проверка по списку блюд или категорий
+    cat = menu.keys()
+    cat_tekst = ':\n'
+    for i in cat:
+        cat_tekst += i + ' \n'
     if word == 'cat_stop':
-        # cat_is_stop(message.text, "стоп")
-        tekst = 'Если хотите отметить что-то еще выберите нужно'
-        bot.send_message(message.chat.id, tekst, reply_markup=keyb_admin())
+        if message.text in menu.keys():
+            a = cat_is_stop(message.text, "стоп")
+            tekst = 'Если хотите отметить что-то еще выберите нужно'
+            bot.send_message(message.chat.id, tekst, reply_markup=keyb_admin())
+        else:
+            bot.send_message(message.chat.id, f'Такой категории нет, попробуйте заново используя эти названия {cat_tekst}',reply_markup=keyb_admin())
     else:
-        # cat_is_stop(message.text)
-        tekst = 'Если хотите отметить что-то еще выберите нужно'
-        bot.send_message(message.chat.id, tekst, reply_markup=keyb_admin())
+
+        if message.text in menu.keys():
+            a = cat_is_stop(message.text)
+            tekst = 'Если хотите отметить что-то еще выберите нужно'
+            bot.send_message(message.chat.id, tekst, reply_markup=keyb_admin())
+        else:
+            bot.send_message(message.chat.id,
+                             f'Такой категории нет, попробуйте заново используя эти названия {cat_tekst}',
+                             reply_markup=keyb_admin())
 
 
 def dish_stop(message, word):
+    values_list = []
+    for cat in menu.values():
+        for dish in cat:
+            values_list.append(dish[0])
+    dish_tekst = ':\n'
+    for i in values_list:
+        dish_tekst+=i + '\n'
+
     if word == 'dish_stop':
-        # dish_is_stop(message.text, "стоп")
-        tekst = 'Если хотите отметить что-то еще выберите нужно'
-        bot.send_message(message.chat.id, tekst, reply_markup=keyb_admin())
+        a = dish_is_stop(message.text, "стоп")
+        if message.text in values_list:
+            tekst = 'Если хотите отметить что-то еще выберите нужно'
+            bot.send_message(message.chat.id, tekst, reply_markup=keyb_admin())
+        else:
+            bot.send_message(message.chat.id,
+                             f'Такого блюда нет, попробуйте заново используя эти названия {dish_tekst}',
+                             reply_markup=keyb_admin())
     else:
-        # dish_is_stop(message.text)
-        tekst = 'Если хотите отметить что-то еще выберите нужно'
-        bot.send_message(message.chat.id, tekst, reply_markup=keyb_admin())
+        a = dish_is_stop(message.text)
+        if message.text in values_list:
+            tekst = 'Если хотите отметить что-то еще выберите нужно'
+            bot.send_message(message.chat.id, tekst, reply_markup=keyb_admin())
+        else:
+            bot.send_message(message.chat.id,
+                             f'Такого блюда нет, попробуйте заново используя эти названия {dish_tekst}',
+                             reply_markup=keyb_admin())
 
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -251,13 +295,32 @@ def query_handler(call):
     elif call.data == 'dish_stop' or call.data == 'dish_run':
         # прописать через if
         text = 'Введите название блюда'
+        word = call.data
         a = bot.send_message(call.message.chat.id, text)
-        bot.register_next_step_handler(a, dish_stop, call.data)
+        bot.register_next_step_handler(a, dish_stop, word)
     elif call.data == 'cat_stop' or call.data == 'cat_run':
         # прописать через if
+        word = call.data
         text = 'Введите название категории'
         a = bot.send_message(call.message.chat.id, text)
-        bot.register_next_step_handler(a, cat_stop, call.data)
+        bot.register_next_step_handler(a, cat_stop, word)
+    elif int(call.data) in range(1500) and call.message.chat.id in id_admin['dostavka']:
+        # print(call.message.text)
+        # print(call)
+        a = call.message.text
+        keyb22 = types.InlineKeyboardMarkup()
+        b1 = types.InlineKeyboardButton(text="Доставленно", callback_data=a.split()[3])
+        keyb22.add(b1)
+        bot.send_message(call.from_user.id, a,reply_markup=keyb22)
+        bot.delete_message(call.message.chat.id, call.message.message_id)
+    elif int(call.data) in range(1500) and call.from_user.id in members_of_dostavka:
+        #функция что доставленно из базы данных
+        print(f'number ===== {call.data}')
+        is_done(int(call.data))
+        bot.send_message(call.from_user.id, f'Спасибо, что доставили заказа под номером  {int(call.data)}')
+        bot.delete_message(call.from_user.id, call.message.message_id)
+
+
 
 
 
