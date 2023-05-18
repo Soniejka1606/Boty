@@ -287,9 +287,15 @@ def for_dostavka(order_id):
     except Exception as e:
         print(e)
     dishes = []
+    # print(f'data ----- {data1}')
+    dish_list = ':\n'
     for i in data1:
-        for d in i:
-            dishes.append(d)
+        dish_list+=  f' {i[0]} в количестве {i[1]} шт \n '
+        # for d in i:
+        #     # print(d)
+        #     # dish_list += f'{d}  шт \n'
+        #     # dishes.append(d)
+    # print(dish_list)
     text_dict = {}  # Текст для доставщика
     data_text = ''
     for i in data:
@@ -297,8 +303,8 @@ def for_dostavka(order_id):
         data_text += "адрес - " + str(i[1]) + '\n'
         data_text += "комментарий - " + str(i[2]) + '\n'
         data_text += "номер телефона - " + str(i[3]) + '\n'
-        data_text += "стоимость заказа - " + str(i[4]) + '\n'
-        data_text += "блюда - " + str(dishes)+"."
+        data_text += "стоимость заказа - " + str(i[4]) + 'руб. \n'
+        data_text += "блюда" + str(dish_list)+"--------"
 
     return data_text
 
@@ -353,6 +359,7 @@ def cat_is_stop(name_cat, word="run"):
             return True
         except Exception as e:
             print("Ошибка: ", e)
+            return False
     else:
         try:
             orderdish = f"UPDATE CategoryDish SET is_stop = 0 WHERE name = '{name_cat}'"
@@ -361,6 +368,7 @@ def cat_is_stop(name_cat, word="run"):
             return True
         except Exception as e:
             print("Ошибка: ", e)
+            return False
 
 
 # print(cat_is_stop("Десерты", "нестоп"))
@@ -379,6 +387,7 @@ def dish_is_stop(name_dish, word="run"):
             return True
         except Exception as e:
             print("Ошибка: ", e)
+            return False
     else:
         try:
             orderdish = f"UPDATE Dish SET is_stop = 0 WHERE name = '{name_dish}'"
@@ -387,6 +396,7 @@ def dish_is_stop(name_dish, word="run"):
             return True
         except Exception as e:
             print("Ошибка: ", e)
+            return False
 
 
 # print(dish_is_stop("Мороженное", "стоп"))
