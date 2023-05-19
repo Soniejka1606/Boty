@@ -8,7 +8,7 @@ from telebot import types
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup
 from telebot.types import InputMediaPhoto
 from config import *
-from database import for_dostavka, menu_main, cat_is_stop, dish_is_stop, is_done
+from database import for_dostavka, menu_main, cat_is_stop, dish_is_stop, is_done, registration
 
 bot = telebot.TeleBot('6236696473:AAH_OGgS5jBhtDC7ZRA8lJwXHHZkQCfxZwg')
 """Все id"""
@@ -28,9 +28,11 @@ def all_id():
 all_id()
 
 """Переменная для регистрации"""
-reg = dict()
+reg = {}
 """Переменная для заказа"""
 order_dish = {}
+"""Переменная для меню"""
+menu_ = menu_main()
 
 """Кнопки"""
 """Для зарегистрированных пользователей"""
@@ -47,7 +49,7 @@ keyb_reg.add(types.KeyboardButton('Зарегистрироваться'))
 
 """Для меню"""
 keyb_menu = types.InlineKeyboardMarkup()
-keyb_menu.add(*(types.InlineKeyboardButton(a, callback_data='m' + a) for a in config.menu.keys()))
+keyb_menu.add(*(types.InlineKeyboardButton(a, callback_data='m' + a) for a in menu_.keys()))
 
 """Добавление блюд"""
 
@@ -70,16 +72,19 @@ def keyb_finish_order():
 
 
 def dishs(category, message_id):
-    for dish in config.menu[category]:
+    print(menu_)
+    for dish in menu_[category]:
         for info in dish:
-            if info == dish[0]:
+            if info == dish[1]:
                 bot.send_message(message_id, f'Название - {info}')
-            elif info == dish[1]:
-                bot.send_message(message_id, f'Стоймость - {info}')
-            elif info == dish[2]:
-                photo1 = open(info, 'rb')
-                bot.send_photo(message_id, photo=photo1)
             elif info == dish[3]:
+                bot.send_message(message_id, f'Стоймость - {info}')
+            elif info == dish[5]:
+                bot.send_message(message_id, f'Время готовки - {info}')
+            elif info == dish[2]:
+                photo1 = open(f'img/{info}', 'rb')
+                bot.send_photo(message_id, photo=photo1)
+            elif info == dish[4]:
                 bot.send_message(message_id, f'Состав - {info}')
         keyb_ = types.InlineKeyboardMarkup()
         keyb_.add(types.InlineKeyboardButton('Заказать', callback_data=f'*{dish[0]}'))
@@ -145,20 +150,22 @@ def stop_or_run(word=0):
 def start(message):
     print(message.chat.id)
     if message.text == '/update' and message.chat.id in config.id_admin['super_admin']:
-        a = menu_main()  # надо будет исходя из этого обновить config.menu
-        bot.send_message(message.chat.id, f'Обновленная информация выглядит так {str(a)}')
+        menu_ = menu_main()  # надо будет исходя из этого обновить config.menu
+        bot.send_message(message.chat.id, f'Обновленная информация выглядит так {str(menu_)}')
     if message.text == 'Запиши' and message.chat.id in config.id_admin['dostavka']:
         if message.from_user.id not in members_of_dostavka:
-            members_of_dostavka.append(message.from_user.id)
+            # members_of_dostavka.append(message.from_user.id)
+            id_all_dict['members_of_dostavka'].append(message.from_user.id)
+            with open('id_user.json', 'w', encoding='utf-8') as file:
+                json.dump(id_all_dict, file, ensure_ascii=False)
+            all_id()
             bot.send_message(message.chat.id, 'Спасибо, что присоеденились в группу "Доставка"')
     if message.text == '/start':
         if message.chat.id not in id_all:
             bot.send_message(message.chat.id, 'hellow')
             bot.send_message(message.chat.id, 'Вам надо зарегистрироваться', reply_markup=keyb_reg)
-        if message.chat.id in id_all_dict['users']:
+        else:
             bot.send_message(message.chat.id, 'hellow', reply_markup=keyb_start_users)
-        if message.chat.id in id_all_dict['super_admin'] or message.chat.id in id_all_dict['admin']:
-            bot.send_message(message.chat.id, 'hellow', reply_markup=keyb_start_admin)
     if message.text == 'Зарегистрироваться':
         bot.send_message(message.chat.id, 'Регистрация')
         mesg = bot.send_message(message.chat.id, 'Введите логин')
@@ -178,7 +185,7 @@ def start(message):
 def login(message):
     bot.send_message(message.chat.id, "ваш логин - " + message.text)
     reg.setdefault(message.chat.id, dict())
-    reg[message.chat.id].setdefault('login', message.text)
+    reg[message.chat.id].setdefault("name", message.text)
     mesg = bot.send_message(message.chat.id, 'Введите телефон')
     bot.register_next_step_handler(mesg, phone)
 
@@ -186,7 +193,8 @@ def login(message):
 def phone(message):
     if message.text.isdigit():
         bot.send_message(message.chat.id, "ваш телефон - " + message.text)
-        reg[message.chat.id].setdefault('phone', message.text)
+        reg[message.chat.id].setdefault('phone_number', message.text)
+        reg[message.chat.id].setdefault('tg_id', message.chat.id)
         mesg = bot.send_message(message.chat.id, 'Введите пароль мин. 6 символов')
         bot.register_next_step_handler(mesg, password)
 
@@ -198,10 +206,12 @@ def password(message):
         bot.register_next_step_handler(mesg, password)
     else:
         bot.send_message(message.chat.id, "ваш пароль - " + message.text)
-        reg[message.chat.id].setdefault('password', message.text)
+        reg[message.chat.id].setdefault("password", message.text)
         id_all_dict['users'].append(message.chat.id)
+        print(reg[message.chat.id])
         with open('id_user.json', 'w', encoding='utf-8') as file:
             json.dump(id_all_dict, file, ensure_ascii=False)
+        print(registration(reg[message.chat.id]))
         all_id()
         # функция
         bot.send_message(message.chat.id, "Вы успешно зарегистрировались")
@@ -230,12 +240,12 @@ def next_step(message):
 
 def cat_stop(message, word):
     # Нужна проверка по списку блюд или категорий
-    cat = menu.keys()
+    cat = menu_.keys()
     cat_tekst = ':\n'
     for i in cat:
         cat_tekst += i + ' \n'
     if word == 'cat_stop':
-        if message.text in menu.keys():
+        if message.text in menu_.keys():
             a = cat_is_stop(message.text, "стоп")
             tekst = 'Если хотите отметить что-то еще выберите нужно'
             bot.send_message(message.chat.id, tekst, reply_markup=keyb_admin())
@@ -245,7 +255,7 @@ def cat_stop(message, word):
                              reply_markup=keyb_admin())
     else:
 
-        if message.text in menu.keys():
+        if message.text in menu_.keys():
             a = cat_is_stop(message.text)
             tekst = 'Если хотите отметить что-то еще выберите нужно'
             bot.send_message(message.chat.id, tekst, reply_markup=keyb_admin())
@@ -257,7 +267,7 @@ def cat_stop(message, word):
 
 def dish_stop(message, word):
     values_list = []
-    for cat in menu.values():
+    for cat in menu_.values():
         for dish in cat:
             values_list.append(dish[0])
     dish_tekst = ':\n'
@@ -326,21 +336,6 @@ def query_handler(call):
         text = 'Введите название категории'
         a = bot.send_message(call.message.chat.id, text)
         bot.register_next_step_handler(a, cat_stop, word)
-    elif int(call.data) in range(1500) and call.message.chat.id in id_admin['dostavka']:
-        # print(call.message.text)
-        # print(call)
-        a = call.message.text
-        keyb22 = types.InlineKeyboardMarkup()
-        b1 = types.InlineKeyboardButton(text="Доставленно", callback_data=a.split()[3])
-        keyb22.add(b1)
-        bot.send_message(call.from_user.id, a, reply_markup=keyb22)
-        bot.delete_message(call.message.chat.id, call.message.message_id)
-    elif int(call.data) in range(1500) and call.from_user.id in members_of_dostavka:
-        # функция что доставленно из базы данных
-        print(f'number ===== {call.data}')
-        is_done(int(call.data))
-        bot.send_message(call.from_user.id, f'Спасибо, что доставили заказа под номером  {int(call.data)}')
-        bot.delete_message(call.from_user.id, call.message.message_id)
     elif call.data[0] == '*':
         msg = bot.send_message(call.message.chat.id, f'Введите количество - {call.data[1:]}')
         bot.register_next_step_handler(msg, add_dish, call.data[0:])
@@ -358,6 +353,22 @@ def query_handler(call):
         bot.send_message(call.message.chat.id, f'Ваш заказ отменен')
         bot.send_message(call.message.chat.id, f'Если хотите оформить еще заказ жмите меню',
                          reply_markup=keyb_start_users)
+    elif int(call.data) in range(1500) and call.message.chat.id in id_all_dict['dostavka']:
+        # print(call.message.text)
+        # print(call)
+        a = call.message.text
+        keyb22 = types.InlineKeyboardMarkup()
+        b1 = types.InlineKeyboardButton(text="Доставленно", callback_data=a.split()[3])
+        keyb22.add(b1)
+        bot.send_message(call.from_user.id, a, reply_markup=keyb22)
+        bot.delete_message(call.message.chat.id, call.message.message_id)
+    elif int(call.data) in range(1500) and call.from_user.id in id_all_dict['members_of_dostavka']:
+        # функция что доставленно из базы данных
+        print(f'number ===== {call.data}')
+        is_done(int(call.data))
+        bot.send_message(call.from_user.id, f'Спасибо, что доставили заказа под номером  {int(call.data)}')
+        bot.delete_message(call.from_user.id, call.message.message_id)
+
 
 """Добавление блюд"""
 
@@ -397,7 +408,8 @@ def phone_dish(message):
             order_info += f'{k} - {v}'
         else:
             order_info += f'{k} - {v} \n'
-    bot.send_message(message.chat.id, 'Оформить заказ?', reply_markup=keyb_add_dish())
+
+    bot.send_message(message.chat.id, 'Оформить заказ?', reply_markup=keyb_finish_order())
 
 
 """ADMINKA"""

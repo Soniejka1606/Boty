@@ -1,6 +1,6 @@
 
 # all_id_dict = {'super_admin': [], 'admin': [], 'users': []}
-id_admin = {'super_admin': [-891527106], 'dostavka': [-945349982], 'povars': [-813101250]}
+id_admin = {'super_admin': [-891527106], 'dostavka': [-700815185], 'povars': [-813101250]}
 members_of_dostavka = []
 menu = {'Мангал': [['Шашлык', '100', 'img/Шашлык.jpg', 'Свинина, лук'],
                    ['Крылышки Барбекью', '200', 'img/Крылышки.jpg', 'Курица, чеснок'],

@@ -63,9 +63,75 @@ with con:
             description TEXT,
             is_stop BOOLEAN DEFAULT 0);
     """)
+with con:
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS MarkDish (
+            id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            name TEXT,
+            mark TEXT DEFAULT 4);
+    """)
 
+with con:
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS Comments (
+            id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            comment TEXT);
+    """)
+def add_comment(dict_):
+    '''
+    :param dict_: берет словарь вида {"comment":['dfjvfjnjfjbngj"]}
+    :return:  аписывает комментарий
+    '''
+    try:
+        sql_insert = f"INSERT INTO Comments (comment) values(?)"
+        with con:
+            con.execute(sql_insert, (dict_["comment"]))
+        return True
+    except Exception as e:
+        return e
+# print(add_comment({"comment":['все восхитительно, очень классное оформление заказа быстро и понятно']}))
+def show_comment():
+    commets=[]
+    try:
+        data = con.execute(f"SELECT comment FROM Comments")
+        data = data.fetchall()
+        for i in data:
+            for j in i:
+                commets.append(j)
+        return commets
+    except Exception as e:
+        return e
+# print(show_comment())
+def set_mark(dict_):
+    '''
+    :param dict_: словарь {dish_name: что-то,mark:5}
+    :return: новое среднее значение
+    '''
+    new_mark = 0
+    try:
+        mark = 0
+        data = con.execute(f"SELECT mark FROM MarkDish WHERE name='{dict_['dish_name'].capitalize()}'")
+        data = data.fetchall()
+
+        for i in data:
+            for k in i:
+                mark = k
+        new_mark = (float(k)+dict_['mark'])/2
+        new_mark = round(new_mark, 2)
+        new_mark = str(new_mark)
+    except Exception as e:
+        print(e)
+    try:
+        nm = f"UPDATE MarkDish SET mark = {new_mark} WHERE name = '{dict_['dish_name']}' "
+        with con:
+            con.execute(nm)
+    except Exception as e:
+        print("Ошибка: ", e)
+    return new_mark
+# print(set_mark({'dish_name': 'мороженное','mark':5}))
 
 def registration(dict_):
+    print(dict_)
     #  функция принимает в качестве аргумента словарь со значениями, возвращает TRUE при успехе или ошибку при ошибке
     """
     :param Словарь:
@@ -93,7 +159,7 @@ def registration(dict_):
 
 # registration({"tg_id": 515215,"name": "KAtya","phone_number":55525,"password":"drftgyhfdfgg"})
 
-def ordering(order_dish, order_addreess, id):
+def ordering(order_dish, order_addreess):
     """
     функция значала заполняет таблицу Orders по адресу и user_id
     потом OrderDish
@@ -101,9 +167,9 @@ def ordering(order_dish, order_addreess, id):
     :return: заполненные таблицы плюс время ожидание заказа в переменной time
     """
     # забираем с таблицы user значение user_id
-    if "tg_id" in id.keys():
+    if "tg_id" in order_addreess.keys():
         try:
-            data = con.execute(f"SELECT id FROM User WHERE tg_id={id['tg_id']}")
+            data = con.execute(f"SELECT id FROM User WHERE tg_id={order_addreess['tg_id']}")
             data = data.fetchall()
             user_id = 0
             for i in data:
@@ -113,7 +179,7 @@ def ordering(order_dish, order_addreess, id):
             return False
     else:
         try:
-            data = con.execute(f"SELECT id FROM User WHERE tg_id={id['vk_id']}")
+            data = con.execute(f"SELECT id FROM User WHERE tg_id={order_addreess['vk_id']}")
             data = data.fetchall()
             user_id = 0
             for i in data:
@@ -126,8 +192,8 @@ def ordering(order_dish, order_addreess, id):
         sql_insert = f"INSERT INTO Orders (user_id,address) values(?,?)"
         with con:
             con.execute(sql_insert, (user_id, order_addreess["address"]))
-    except:
-        return False
+    except Exception as e:
+        return print(e)
     # поиск последнего добавленного заказа по user_id, находим order_id, чтобы потом заполнять OrderDish
     try:
         order_id = con.execute(f"SELECT id FROM Orders WHERE user_id={user_id} ORDER BY id DESC LIMIT 1")
@@ -153,26 +219,58 @@ def ordering(order_dish, order_addreess, id):
         except Exception as e:
             print("Ошибка: ", e)
             return False
+
+    # добавление коментария
+    try:
+        # com = f"INSERT INTO Orders (comment_to_order) values(?) WHERE id = {order_id} "
+        com = f"UPDATE Orders SET comment_to_order = ? WHERE Id = ?"
+        with con:
+            con.execute(com,(order_addreess["comment"],order_id))
+    except Exception as e:
+        print("Ошибка: ", e)
+        return False
     # подсчет времени на готовку
-    time = con.execute(f'''SELECT Order_dish.count * Dish.time_of_cook
-                                FROM Order_dish
-                                INNER JOIN Dish ON Order_dish.dish_id = dish.id
-                                WHERE Order_dish.order_id = {order_id}''')
-    time = time.fetchall()
-    all_time = 0
-    for s in time:
-        for k in s:
-            all_time += k
-    all_time += 30
-    if all_time > 60:
-        hours = all_time // 60
-        minutes = all_time % 60
+    return "done"
 
+
+
+# print(ordering({"Котлета":2,"Щи":2},{'address':"Лебедева8",'tg_id':333,"comment":'Вилки и ножи'}))
+
+def time_costs(order_dish):
+    '''
+    :param order_dish: {словарь блюдо:количество}
+    :return: время готовки стоимость и список блюд
+    '''
+    dishes = 'Заказанные блюда:\n'
+    time = 30
+    cost = 0
+    for dish,count in order_dish.items():
+        try:
+            time_cook = con.execute(f'''SELECT {count} * Dish.time_of_cook,
+                                                {count} * Dish.costs
+                                            FROM Dish
+                                            WHERE Dish.name = '{dish}' ''')
+            time_cook = time_cook.fetchall()
+            # print(time_cook)
+            dishes+= f'{dish} в количестве {count} шт.\n'
+            for i in time_cook:
+                time+=i[0]
+                cost+=i[1]
+        except Exception as e:
+            print(e)
+    if time > 60:
+        hours = time // 60
+        minutes = time % 60
         time_of_cook = f"{hours} часов {minutes} минут"
-    return time_of_cook
+    else:
+        time_of_cook = f"{time} минут"
+    kartoczka = f'Заказ на сумму {cost} руб. будет доставлен через {time_of_cook}\n'
+    kartoczka+=dishes
+    return kartoczka
+
+# print(time_costs({"Чизкейк":1,"Котлета":1}))
 
 
-# print(ordering({"Kokos":2,"Banan":2},{'address':"Minskaya"},{'tg_id':515215}))
 
 def show_category():
     '''
@@ -290,7 +388,7 @@ def for_dostavka(order_id):
     # print(f'data ----- {data1}')
     dish_list = ':\n'
     for i in data1:
-        dish_list+=  f' {i[0]} в количестве {i[1]} шт \n '
+        dish_list += f' {i[0]} в количестве {i[1]} шт \n '
         # for d in i:
         #     # print(d)
         #     # dish_list += f'{d}  шт \n'
@@ -304,7 +402,7 @@ def for_dostavka(order_id):
         data_text += "комментарий - " + str(i[2]) + '\n'
         data_text += "номер телефона - " + str(i[3]) + '\n'
         data_text += "стоимость заказа - " + str(i[4]) + 'руб. \n'
-        data_text += "блюда" + str(dish_list)+"--------"
+        data_text += "блюда" + str(dish_list) + "--------"
 
     return data_text
 
@@ -408,7 +506,7 @@ def menu_main():
     '''
     try:
         with con:
-            data = con.execute(f'''SELECT CategoryDish.name, Dish.id,Dish.name,Dish.picture,Dish.costs,Dish.ingridients
+            data = con.execute(f'''SELECT CategoryDish.name, Dish.id,Dish.name,Dish.picture,Dish.costs,Dish.ingridients,Dish.time_of_cook
                                     FROM CategoryDish
                                     JOIN Dish ON 
                                     Dish.category_id = CategoryDish.id
@@ -431,3 +529,115 @@ def menu_main():
             menu[i[0]].append(a)
     return menu
 # print(menu_main())
+
+def show_my_orders(id):
+    '''
+    :param id: Принимает номер заказа
+    :return: выдет все актуальные заказы
+    '''
+    kartoczki = []
+    dict_= {}
+    try:
+        with con:
+            data1 = con.execute(f'''SELECT User.name,Orders.id, Dish.name,Order_dish.count,Order_dish.count*Dish.costs
+                                    FROM User 
+                                                JOIN Orders ON 
+                                                User.id = Orders.user_id
+                                                JOIN Order_dish ON 
+                                                Orders.id = Order_dish.order_id
+                                                JOIN Dish ON 
+                                                Order_dish.dish_id = Dish.id
+                                                WHERE User.tg_id = {id} 
+                                                AND Orders.is_canceled = 0 
+                                                AND Orders.is_done = 0 ''')
+            data1 = data1.fetchall()
+            for i in data1:
+                if i[1] not in dict_.keys():
+                    dict_[i[1]] = [[i[2],i[3],i[4]]]
+                else:
+                    dict_[i[1]].append([i[2],i[3],i[4]])
+
+            for k,v in dict_.items():
+                tekst = f'Заказ номер {k}\n'
+                cost = 0
+                for i in v:
+                    tekst+=f'Блюдо {i[0]} в количестве {i[1]} шт. суммой {i[2]} руб.\n'
+                    cost+=i[2]
+                tekst += f'Общая сумма равна {cost} руб'
+                # print(tekst)
+                kartoczki.append(tekst)
+
+        return kartoczki
+    except Exception as e:
+        print(e)
+# print(show_my_orders(333))
+
+
+def stat():
+    '''
+    :return: Статистику всего блюд и отмены и плюс популярность блюд
+    '''
+    tekst = ''
+    try:
+        with con:
+            data1 = con.execute(f'''SELECT COUNT(*),(SELECT COUNT(*) FROM ORders) FROM ORders
+                                                WHERE Orders.is_canceled = 1''')
+            data1 = data1.fetchall()
+            canc = 0
+            for i in data1:
+                    tekst += f'За сегодня отмененных заказов {i[0]}.\nВсего заказов {i[1]}\n'
+    except Exception as e:
+        print(e)
+    try:
+        with con:
+            data = con.execute(f'''SELECT Dish.name ,SUM(Order_dish.count) FROM Order_dish
+                                            JOIN Dish ON 
+                                            Order_dish.dish_id = Dish.id
+                                            GROUP BY Dish.name 
+                                            ORDER BY SUM(Order_dish.count) DESC ''')
+            data= data.fetchall()
+            popular = 'Популярность блюд:\n'
+            k = 0
+            for i in data:
+                k+=1
+                popular+=f'{k}) {i[0]}: заказали {i[1]} шт\n'
+
+    except Exception as e:
+        print(e)
+    tekst += popular
+
+    return tekst
+
+# print(stat())
+
+def clear_table():
+    '''
+    :return: Очищение таблиц для ежедневной статистики
+    '''
+    try:
+        clear_ = f'''DELETE FROM Orders'''
+        with con:
+            con.execute(clear_)
+    except Exception as e:
+        print(e)
+    try:
+        clear_ = f'''DELETE FROM Order_dish'''
+        with con:
+            con.execute(clear_)
+    except Exception as e:
+        print(e)
+    return True
+def find_id_user(order_id):
+    try:
+        with con:
+            data = con.execute(f'''SELECT tg_id FROM User
+                                            JOIN Orders ON
+                                            User.id = Orders.user_id
+                                                WHERE Orders.id = {order_id}''')
+            data= data.fetchall()
+            a = data[0][0]
+        return a
+    except Exception as e:
+        print(e)
+
+print(find_id_user(1))

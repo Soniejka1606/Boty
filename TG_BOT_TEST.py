@@ -118,11 +118,17 @@ def stop_or_run(word=0):
 
 """"""
 
+@bot.message_handler(content_types=['sticker','voice','audio','document','photo','video','caption','contact','location','venue'])
+def spam(message):
+    print(message.from_user.id)
+    bot.send_message(message.chat.id, f'не ломай бота пж')
 
 @bot.message_handler(content_types=['text'])
 def start(message):
     # print(message.chat.id)
-    # print(message.from_user.id)
+    print(message.from_user.id)
+
+
     if message.text == '/update' and message.chat.id in config.id_admin['super_admin']:
         a = menu_main() #надо будет исходя из этого обновить config.menu
         bot.send_message(message.chat.id, f'Обновленная информация выглядит так {str(a)}')
@@ -261,11 +267,37 @@ def dish_stop(message, word):
                              f'Такого блюда нет, попробуйте заново используя эти названия {dish_tekst}',
                              reply_markup=keyb_admin())
 
-
+def new_com(message):
+    keybo = types.InlineKeyboardMarkup()
+    b1 = types.InlineKeyboardButton(text="Принять комментарий", callback_data='GoodComment')
+    keybo.add(b1)
+    b2 = types.InlineKeyboardButton(text="Отклонить комментарий", callback_data='BadComment')
+    keybo.add(b2)
+    bot.send_message(message.from_user.id, 'Ваш комментарий отправлен на подтверждение')
+    com = message.text
+    bot.send_message(-891527106, com,reply_markup=keybo)
+    bot.delete_message(message.from_user.id, message.message.message_id)
 @bot.callback_query_handler(func=lambda call: True)
 def query_handler(call):
     if call.data == 'menu':
         bot.send_message(call.from_user.id, 'Выберите категорию', reply_markup=keyb_menu)
+
+
+    elif call.data == 'BadComment':
+        bot.send_message(call.message.chat.id, "комментарий НЕ ОПУБЛИКОВАН")
+        bot.delete_message(call.message.chat.id, call.message.message_id)
+    elif call.data == 'GoodComment':
+        bot.send_message(call.message.chat.id, "комментарий  ОПУБЛИКОВАН")
+        add_comment({'comment':[call.message.text]})
+        bot.delete_message(call.message.chat.id, call.message.message_id)
+    elif call.data == 'Хочу коммент':
+        text = 'Напишите комментарий'
+        a = bot.send_message(call.message.chat.id, text)
+        bot.register_next_step_handler(a, new_com)
+    elif call.data == 'Не хочу коммент':
+        text = 'Спасибо, что пользовались нашими услугами'
+        bot.delete_message(call.message.chat.id, call.message.message_id)
+        bot.send_message(call.message.chat.id,text)
     elif call.data[0] == 'm':
         massage_id = call.from_user.id
         dishs(call.data[1:], massage_id)
@@ -312,13 +344,29 @@ def query_handler(call):
         b1 = types.InlineKeyboardButton(text="Доставленно", callback_data=a.split()[3])
         keyb22.add(b1)
         bot.send_message(call.from_user.id, a,reply_markup=keyb22)
+        #new
+        d = call.message.text+'\n'+'Заказ принят доставщиком - '+'@' + call.from_user.username
+        bot.send_message(call.message.chat.id, d)
         bot.delete_message(call.message.chat.id, call.message.message_id)
     elif int(call.data) in range(1500) and call.from_user.id in members_of_dostavka:
         #функция что доставленно из базы данных
-        print(f'number ===== {call.data}')
+        # print(f'number ===== {call.data}')
+        keyb22 = types.InlineKeyboardMarkup()
+        b1 = types.InlineKeyboardButton(text="Да", callback_data='Хочу коммент')
+        keyb22.add(b1)
+        b1 = types.InlineKeyboardButton(text="Нет", callback_data='Не хочу коммент')
+        keyb22.add(b1)
+        b = call.message.text
+        b = b.split()[3]
+        adress = find_id_user(b)
+        bot.send_message(adress, "Хотите оставить комментарий?",reply_markup=keyb22)
+
         is_done(int(call.data))
-        bot.send_message(call.from_user.id, f'Спасибо, что доставили заказа под номером  {int(call.data)}')
+        # new
+        d = call.message.text + '\n' + 'ЗАКАЗ ДОСТАВЛЕН'
+        bot.send_message(call.from_user.id, d)
         bot.delete_message(call.from_user.id, call.message.message_id)
+
 
 
 
