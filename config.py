@@ -1,7 +1,6 @@
-
 # all_id_dict = {'super_admin': [], 'admin': [], 'users': []}
-id_admin = {'super_admin': [-891527106], 'dostavka': [-700815185], 'povars': [-813101250]}
-members_of_dostavka = []
+# id_admin = {'super_admin': [-891527106], 'dostavka': [-700815185], 'povars': [-813101250]}
+# members_of_dostavka = []
 # menu = {'Мангал': [['Шашлык', '100', 'img/Шашлык.jpg', 'Свинина, лук'],
 #                    ['Крылышки Барбекью', '200', 'img/Крылышки.jpg', 'Курица, чеснок'],
 #                    ['Люля кебаба', '200', 'img/Люля.jpeg', 'Говядина, помидоры']],
@@ -12,5 +11,8 @@ members_of_dostavka = []
 #                    ['Банан', '33', 'img/Банан.jpg', 'Банан'],
 #                    ['Ананас', '33', 'img/Ананас.jpg', 'Ананас']]}
 
+otz = [{'name': 'coment', 'ocenka': 4},
+       {'name': 'coment2', 'ocenka': 3},
+       {'name': 'coment3', 'ocenka': 4}]
 
-
+orders_your = {'order_id': 5, 'costs': 100, 'sostav':{'борщ':1, 'мороженное':1, 'торт':1,}}

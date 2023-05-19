@@ -8,7 +8,8 @@ from telebot import types
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup
 from telebot.types import InputMediaPhoto
 from config import *
-from database import for_dostavka, menu_main, cat_is_stop, dish_is_stop, is_done, registration
+from database import for_dostavka, menu_main, cat_is_stop, dish_is_stop, is_done, registration, find_id_user, \
+    add_comment
 
 bot = telebot.TeleBot('6236696473:AAH_OGgS5jBhtDC7ZRA8lJwXHHZkQCfxZwg')
 """Все id"""
@@ -144,16 +145,19 @@ def stop_or_run(word=0):
 
 
 """"""
-
+@bot.message_handler(content_types=['sticker','voice','audio','document','photo','video','caption','contact','location','venue'])
+def spam(message):
+    print(message.from_user.id)
+    bot.send_message(message.chat.id, f'не ломай бота пж')
 
 @bot.message_handler(content_types=['text'])
 def start(message):
-    print(message.chat.id)
-    if message.text == '/update' and message.chat.id in config.id_admin['super_admin']:
+    global menu_
+    if message.text == '/update' and message.chat.id in id_all_dict["super_admin"]:
         menu_ = menu_main()  # надо будет исходя из этого обновить config.menu
         bot.send_message(message.chat.id, f'Обновленная информация выглядит так {str(menu_)}')
-    if message.text == 'Запиши' and message.chat.id in config.id_admin['dostavka']:
-        if message.from_user.id not in members_of_dostavka:
+    if message.text == 'Запиши' and message.chat.id in id_all_dict['dostavka']:
+        if message.from_user.id not in id_all_dict['members_of_dostavka']:
             # members_of_dostavka.append(message.from_user.id)
             id_all_dict['members_of_dostavka'].append(message.from_user.id)
             with open('id_user.json', 'w', encoding='utf-8') as file:
@@ -171,13 +175,13 @@ def start(message):
         mesg = bot.send_message(message.chat.id, 'Введите логин')
         bot.register_next_step_handler(mesg, login)
     if message.text == '/run':
-        if message.chat.id in config.id_admin['povars']:
+        if message.chat.id in id_all_dict['povars']:
             bot.send_message(message.chat.id, 'Если хотите ввести номер приготовленного заказа нажмите на кнопку',
                              reply_markup=next(1))
-        if message.chat.id in config.id_admin['dostavka']:
+        if message.chat.id in id_all_dict['dostavka']:
             bot.send_message(message.chat.id, 'Если хотите ввести номер доставленного заказа нажмите на кнопку',
                              reply_markup=next(1, 1))
-        if message.chat.id in config.id_admin['super_admin']:
+        if message.chat.id in id_all_dict['super_admin']:
             bot.send_message(message.chat.id, 'Нажмите, что хотите остановить или возообновить',
                              reply_markup=keyb_admin())
 
@@ -220,7 +224,7 @@ def password(message):
 
 def next_step(message):
     # print("next run")
-    if message.chat.id in config.id_admin['povars']:
+    if message.chat.id in id_all_dict['povars']:
         # print(message.text)
         # прописать через if
         dict_info = for_dostavka(message.text)
@@ -229,11 +233,11 @@ def next_step(message):
         b1 = types.InlineKeyboardButton(text="Принять", callback_data=dict_info.split()[3])
         keyb11.add(b1)
 
-        bot.send_message(id_admin['dostavka'][0], dict_info, reply_markup=keyb11)
+        bot.send_message(id_all_dict['dostavka'][0], dict_info, reply_markup=keyb11)
         # print(dict_info)
         tekst = 'Если хотите отметить сделанным еще заказ нажмите на кнопку "Заказ сделан"'
         bot.send_message(message.chat.id, tekst, reply_markup=next())
-    elif message.chat.id in config.id_admin['dostavka']:
+    elif message.chat.id in id_all_dict['dostavka']:
         tekst = 'Если хотите отметить сделанным еще заказ нажмите на кнопку "Заказ сделан"'
         bot.send_message(message.chat.id, tekst, reply_markup=next(0, 1))
 
@@ -293,11 +297,38 @@ def dish_stop(message, word):
                              f'Такого блюда нет, попробуйте заново используя эти названия {dish_tekst}',
                              reply_markup=keyb_admin())
 
+def new_com(message, text):
+    keybo = types.InlineKeyboardMarkup()
+    b1 = types.InlineKeyboardButton(text="Принять комментарий", callback_data='GoodComment')
+    keybo.add(b1)
+    b2 = types.InlineKeyboardButton(text="Отклонить комментарий", callback_data='BadComment')
+    keybo.add(b2)
+    bot.send_message(message.from_user.id, 'Спасибо за ваш отзыв')
+    com = message.text+' @'+text
+    bot.send_message(id_all_dict["super_admin"][0], com,reply_markup=keybo)
+    bot.delete_message(message.from_user.id, message.message_id)
+
+
 
 @bot.callback_query_handler(func=lambda call: True)
 def query_handler(call):
     if call.data == 'menu':
         bot.send_message(call.from_user.id, 'Выберите категорию', reply_markup=keyb_menu)
+    elif call.data == 'BadComment':
+        bot.send_message(call.message.chat.id, "комментарий НЕ ОПУБЛИКОВАН")
+        bot.delete_message(call.message.chat.id, call.message.message_id)
+    elif call.data == 'GoodComment':
+        bot.send_message(call.message.chat.id, "комментарий  ОПУБЛИКОВАН")
+        add_comment({'comment': [call.message.text]})
+        bot.delete_message(call.message.chat.id, call.message.message_id)
+    elif call.data == 'Хочу коммент':
+        text = 'Напишите комментарий'
+        a = bot.send_message(call.message.chat.id, text)
+        bot.register_next_step_handler(a, new_com, call.from_user.username)
+    elif call.data == 'Не хочу коммент':
+        text = 'Спасибо, что пользовались нашими услугами'
+        bot.delete_message(call.message.chat.id, call.message.message_id)
+        bot.send_message(call.message.chat.id, text)
     elif call.data[0] == 'm':
         massage_id = call.from_user.id
         dishs(call.data[1:], massage_id)
@@ -310,11 +341,11 @@ def query_handler(call):
         a = bot.send_message(call.message.chat.id, text)
         bot.register_next_step_handler(a, next_step)
     elif call.data == 'Пока что все':
-        if call.message.chat.id in id_admin['povars']:
+        if call.message.chat.id in id_all_dict['povars']:
             bot.send_message(call.message.chat.id,
                              'Спасибо, если будет готово еще какое-то блюдо, нажмите кнопку "Заказ сделан" ',
                              reply_markup=next(1))
-        if call.message.chat.id in id_admin['dostavka']:
+        if call.message.chat.id in id_all_dict['dostavka']:
             bot.send_message(call.message.chat.id,
                              'Спасибо, если будет доставлено еще какое-то блюдо, нажмите кнопку "Заказ сделан" ',
                              reply_markup=next(1, 1))
@@ -361,12 +392,28 @@ def query_handler(call):
         b1 = types.InlineKeyboardButton(text="Доставленно", callback_data=a.split()[3])
         keyb22.add(b1)
         bot.send_message(call.from_user.id, a, reply_markup=keyb22)
+        # new
+        d = call.message.text + '\n' + 'Заказ принят доставщиком - ' + '@' + call.from_user.username
+        bot.send_message(call.message.chat.id, d)
         bot.delete_message(call.message.chat.id, call.message.message_id)
     elif int(call.data) in range(1500) and call.from_user.id in id_all_dict['members_of_dostavka']:
         # функция что доставленно из базы данных
-        print(f'number ===== {call.data}')
+        # print(f'number ===== {call.data}')
+        keyb22 = types.InlineKeyboardMarkup()
+        b1 = types.InlineKeyboardButton(text="Да", callback_data='Хочу коммент')
+        keyb22.add(b1)
+        b1 = types.InlineKeyboardButton(text="Нет", callback_data='Не хочу коммент')
+        keyb22.add(b1)
+        b = call.message.text
+        b = b.split()[3]
+        adress = find_id_user(b)
+        bot.send_message(adress, "Хотите оставить комментарий?", reply_markup=keyb22)
+
         is_done(int(call.data))
-        bot.send_message(call.from_user.id, f'Спасибо, что доставили заказа под номером  {int(call.data)}')
+        # new
+        d = call.message.text + '\n' + 'ЗАКАЗ ДОСТАВЛЕН'
+        bot.send_message(call.from_user.id, d)
+        bot.send_message(id_all_dict["super_admin"][0], d+f' заказчиком - @{call.from_user.username}')
         bot.delete_message(call.from_user.id, call.message.message_id)
 
 

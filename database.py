@@ -90,7 +90,7 @@ def add_comment(dict_):
     except Exception as e:
         return e
 # print(add_comment({"comment":['все восхитительно, очень классное оформление заказа быстро и понятно']}))
-def show_comment():
+def show_comment(): # Возвращает все комментарии
     commets=[]
     try:
         data = con.execute(f"SELECT comment FROM Comments")
@@ -102,7 +102,7 @@ def show_comment():
     except Exception as e:
         return e
 # print(show_comment())
-def set_mark(dict_):
+def set_mark(dict_): # принимает словарь на оценку блюда
     '''
     :param dict_: словарь {dish_name: что-то,mark:5}
     :return: новое среднее значение
@@ -116,7 +116,7 @@ def set_mark(dict_):
         for i in data:
             for k in i:
                 mark = k
-        new_mark = (float(k)+dict_['mark'])/2
+        new_mark = (float(mark)+dict_['mark'])/2
         new_mark = round(new_mark, 2)
         new_mark = str(new_mark)
     except Exception as e:
@@ -236,7 +236,7 @@ def ordering(order_dish, order_addreess):
 
 # print(ordering({"Котлета":2,"Щи":2},{'address':"Лебедева8",'tg_id':333,"comment":'Вилки и ножи'}))
 
-def time_costs(order_dish):
+def time_costs(order_dish): # Собобщение для клиента перед подтверждением заказа
     '''
     :param order_dish: {словарь блюдо:количество}
     :return: время готовки стоимость и список блюд
@@ -532,8 +532,8 @@ def menu_main():
 
 def show_my_orders(id):
     '''
-    :param id: Принимает номер заказа
-    :return: выдет все актуальные заказы
+    :param id: Принимает id пользователя
+    :return: выдут все актуальные заказы
     '''
     kartoczki = []
     dict_= {}
@@ -570,8 +570,9 @@ def show_my_orders(id):
         return kartoczki
     except Exception as e:
         print(e)
-# print(show_my_orders(333))
-
+# for s in show_my_orders(598388419):
+#     print(s+'\n------')
+#     print(s.split()[2])
 
 def stat():
     '''
@@ -640,4 +641,4 @@ def find_id_user(order_id):
     except Exception as e:
         print(e)
 
-print(find_id_user(1))
+# print(find_id_user(1))
