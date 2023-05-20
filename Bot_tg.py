@@ -1,10 +1,10 @@
 import json
 import os
-
+import datetime
 import telebot
 from telebot import types
 from database import for_dostavka, menu_main, cat_is_stop, dish_is_stop, is_done, registration, find_id_user, \
-    add_comment, show_my_orders, ordering, is_canceled, show_comment, time_costs, set_mark
+    add_comment, show_my_orders, ordering, is_canceled, show_comment, time_costs, set_mark, for_cook, stat
 
 bot = telebot.TeleBot('6236696473:AAH_OGgS5jBhtDC7ZRA8lJwXHHZkQCfxZwg')
 
@@ -220,9 +220,17 @@ def start(message):
                          reply_markup=keyb_my_orders)
     if message.text == 'Отзывы':
         comments = show_comment()
-        bot.send_message(message.from_user.id, comments)
+        comments = comments[:10]
+        comments_message = ''
+        for comment in comments:
+            comments_message += comment + '\n'
+        bot.send_message(message.from_user.id, comments_message)
     if message.text == '/rating':
         bot.send_message(message.from_user.id, 'Выберите категорию', reply_markup=menu_cat('ocenka'))
+    if message.text == '/statis':
+        if message.chat.id in id_all_dict["super_admin"]:
+            statist = stat()
+            bot.send_message(message.chat.id, statist)
 
 
 def login(message):
@@ -349,6 +357,7 @@ def new_com(message, text):
 def add_dish(message, name_dish):
     if message.text.isdigit() and int(message.text) < 15:
         if message.chat.id in order_dish:
+            order_dish[message.chat.id]['tg_id'] = message.chat.id
             if 'dishs' in order_dish[message.chat.id]:
                 order_dish[message.chat.id]['dishs'][name_dish] = int(message.text)
             else:
@@ -363,8 +372,7 @@ def add_dish(message, name_dish):
             bot.send_message(message.chat.id, f'Вы заказали {name_dish} - {message.text} порции')
             bot.send_message(message.chat.id, 'Желаете что-то еше', reply_markup=keyb_add_dish())
     else:
-        bot.send_message(message.chat.id, 'Вы ввели не верное значение')
-        msg = bot.send_message(message.chat.id, f'Введите количество - {name_dish}')
+        msg = bot.send_message(message.chat.id, f'Вы ввели не верное значение\nВведите количество - {name_dish}')
         bot.register_next_step_handler(msg, add_dish, name_dish)
 
 
@@ -379,7 +387,9 @@ def address_dish(message):
         msg = bot.send_message(message.chat.id, f'Добавьте комментарий')
         bot.register_next_step_handler(msg, comment_dish)
     else:
-        bot.send_message(message.chat.id, 'Вы ввели не верное значение')
+        msg = bot.send_message(message.chat.id, f'Вы ввели не верное значение\nВведите адрес')
+        bot.register_next_step_handler(msg, address_dish)
+
 
 def comment_dish(message):
     bot.delete_message(message.chat.id, message.message_id)
@@ -406,6 +416,16 @@ def dish_rating(message, name_dish):
         bot.send_message(message.from_user.id, 'Вы ввели некоректные данные')
         msg = bot.send_message(message.chat.id, f'Поставте оценку от 1 до 5')
         bot.register_next_step_handler(msg, dish_rating, name_dish)
+
+
+"""Отмена заказа"""
+
+
+def order_del(message):
+    id_order = message.text
+    """функция кторая принимает id и ставит его на стоп"""
+    is_canceled(int(id_order))
+    bot.send_message(message.chat.id, f'Заказ № {id_order} отменен \n Введите /start для возврата в старт меню')
 
 
 """Проверка на збой при оформлении заказа"""
@@ -502,7 +522,19 @@ def query_handler(call):
         msg = bot.send_message(call.message.chat.id, f'Введите адрес')
         bot.register_next_step_handler(msg, address_dish)
     elif call.data == 'finish_order':
+        print(order_dish[call.message.chat.id])
         ordering(order_dish[call.message.chat.id]['dishs'], order_dish[call.message.chat.id])
+        cook = for_cook()
+        cook = list(cook)
+        bot.send_message(id_all_dict["povars"][0], str(cook))
+        date_order = datetime.date.today()
+        try:
+            os.mkdir(f'orders_add/{date_order}')
+        except:
+            pass
+        with open(f'orders_add/{date_order}/{call.message.chat.id}___{cook}.json', 'w',
+                  encoding='utf-8') as file:
+            json.dump(list(cook), file, ensure_ascii=False)
         os.remove(f'orders/{call.message.chat.id}.json')
         order_dish[call.message.chat.id] = {}
         bot.send_message(call.message.chat.id, f'Ваш заказ принят\nЕсли хотите оформить еще заказ жмите меню',
@@ -550,16 +582,6 @@ def query_handler(call):
         bot.send_message(call.from_user.id, d)
         bot.send_message(id_all_dict["super_admin"][0], d + f' заказчиком - @{call.from_user.username}')
         bot.delete_message(call.from_user.id, call.message.message_id)
-
-
-"""Отмена заказа"""
-
-
-def order_del(message):
-    id_order = message.text
-    """функция кторая принимает id и ставит его на стоп"""
-    is_canceled(int(id_order))
-    bot.send_message(message.chat.id, f'Заказ № {id_order} отменен \n Введите /start для возврата в старт меню')
 
 
 print("Ready")
