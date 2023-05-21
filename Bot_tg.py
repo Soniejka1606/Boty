@@ -1,16 +1,17 @@
 import json
 import os
 import datetime
+import time
 import telebot
 from telebot import types
-from database import for_dostavka, menu_main, cat_is_stop, dish_is_stop, is_done, registration, find_id_user, \
-    add_comment, show_my_orders, ordering, is_canceled, show_comment, time_costs, set_mark, for_cook, stat
+from database import *
 
 bot = telebot.TeleBot('6236696473:AAH_OGgS5jBhtDC7ZRA8lJwXHHZkQCfxZwg')
 
 """Все id"""
 id_all = []
 id_all_dict = {}
+member_masage_id = {}
 
 
 def all_id():
@@ -44,9 +45,9 @@ keyb_start_users.add(*(types.KeyboardButton('Меню'),
 
 keyb_cancel_users = types.ReplyKeyboardMarkup(resize_keyboard=True)
 keyb_cancel_users.add(*(types.KeyboardButton('Меню'),
-                       types.KeyboardButton('Мои заказы'),
-                       types.KeyboardButton('Отзывы'),
-                       types.KeyboardButton('Отмена')))
+                        types.KeyboardButton('Мои заказы'),
+                        types.KeyboardButton('Отзывы'),
+                        types.KeyboardButton('Отмена')))
 """Для регистрации"""
 keyb_reg = types.ReplyKeyboardMarkup(resize_keyboard=True)
 keyb_reg.add(types.KeyboardButton('Зарегистрироваться'))
@@ -87,11 +88,13 @@ def keyb_finish_order():
 
 def dishs(category, message_id, val):
     if val == 'dish':
+        ocenka = show_marks()
         for dish in menu_[category]:
             text = ''
             photo1 = ''
             for info in dish:
                 if info == dish[1]:
+                    text += 'Рейтинг - ' + ocenka[f'{dish[1]}'] + ' ⭐️ \n'
                     text += f'Название - {info}\n'
                 elif info == dish[3]:
                     text += f'Стоимость - {info}\n'
@@ -101,6 +104,7 @@ def dishs(category, message_id, val):
                     photo1 = open(f'img/{info}', 'rb')
                 elif info == dish[4]:
                     text += f'Состав - {info}\n'
+
             bot.send_photo(message_id, photo=photo1, caption=text)
             keyb_ = types.InlineKeyboardMarkup()
             keyb_.add(types.InlineKeyboardButton('Заказать', callback_data=f'*{dish[1]}'))
@@ -195,11 +199,18 @@ def start(message):
                 json.dump(id_all_dict, file, ensure_ascii=False)
             all_id()
             bot.send_message(message.chat.id, 'Спасибо, что присоеденились в группу "Доставка"')
+    if message.text == '/data':
+        date_write = datetime.date.today()
+        with open(f'member_step/write_step{date_write}.txt', 'r', encoding='utf-8') as file:
+            file = file.read()
+            bot.send_message(message.chat.id, str(file))
     if message.text == '/start':
         if message.chat.id not in id_all:
             bot.send_message(message.chat.id, 'Здравствуйте! \n Вам надо зарегистрироваться', reply_markup=keyb_reg)
         else:
             bot.send_message(message.chat.id, 'Здравствуйте!', reply_markup=keyb_start_users)
+        time.sleep(3)
+        bot.delete_message(message.chat.id, message.message_id+1)
     if message.text == 'Зарегистрироваться':
         bot.send_message(message.chat.id, 'Регистрация')
         mesg = bot.send_message(message.chat.id, 'Введите логин')
@@ -293,26 +304,53 @@ def next_step(message):
 
 
 def cat_stop(message, word):
+    global menu_
     # Нужна проверка по списку блюд или категорий
     cat = menu_.keys()
     cat_tekst = ':\n'
     for i in cat:
         cat_tekst += i + ' \n'
     if word == 'cat_stop':
-        if message.text in menu_.keys():
-            cat_is_stop(message.text, "стоп")
+        if message.text.lower().capitalize() in menu_.keys():
+            cat_is_stop(message.text.lower().capitalize(), "стоп")
+            time_write = datetime.datetime.now()
+            date_write = datetime.date.today()
+            step_string = f"name - {message.from_user.first_name}, id - {message.from_user.id}, user_name - @{message.from_user.username} категория {message.text} - поставлена стоп, в {time_write} \n"
+            with open(f'member_step/write_step{date_write}.txt', 'a', encoding='utf-8') as file:
+                try:
+                    data = file.read()
+                    data = step_string + data
+                    file.write(data)
+                except:
+                    file.write(step_string)
             tekst = 'Если хотите отметить что-то еще выберите нужно'
             bot.send_message(message.chat.id, tekst, reply_markup=keyb_admin())
+            menu_ = menu_main()
         else:
             bot.send_message(message.chat.id,
                              f'Такой категории нет, попробуйте заново используя эти названия {cat_tekst}',
                              reply_markup=keyb_admin())
     else:
-
-        if message.text in menu_.keys():
-            cat_is_stop(message.text)
+        all_menu = menu_all()
+        cat = all_menu.keys()
+        cat_tekst = ':\n'
+        for i in cat:
+            cat_tekst += i + ' \n'
+        if message.text.lower().capitalize() in all_menu.keys():
+            cat_is_stop(message.text.lower().capitalize())
+            time_write = datetime.datetime.now()
+            date_write = datetime.date.today()
+            step_string = f"name - {message.from_user.first_name}, id - {message.from_user.id}, user_name - @{message.from_user.username} категория {message.text} - поставлена стоп, в {time_write} \n"
+            with open(f'member_step/write_step{date_write}.txt', 'a', encoding='utf-8') as file:
+                try:
+                    data = file.read()
+                    data = step_string + data
+                    file.write(data)
+                except:
+                    file.write(step_string)
             tekst = 'Если хотите отметить что-то еще выберите нужно'
             bot.send_message(message.chat.id, tekst, reply_markup=keyb_admin())
+            menu_ = menu_main()
         else:
             bot.send_message(message.chat.id,
                              f'Такой категории нет, попробуйте заново используя эти названия {cat_tekst}',
@@ -320,17 +358,29 @@ def cat_stop(message, word):
 
 
 def dish_stop(message, word):
+    global menu_
     values_list = []
     for cat in menu_.values():
         for dish in cat:
-            values_list.append(dish[0])
+            print(dish)
+            values_list.append(dish[1])
     dish_tekst = ':\n'
     for i in values_list:
         dish_tekst += i + '\n'
-
     if word == 'dish_stop':
-        dish_is_stop(message.text, "стоп")
-        if message.text in values_list:
+        dish_is_stop(message.text.lower().capitalize(), "стоп")
+        time_write = datetime.datetime.now()
+        date_write = datetime.date.today()
+        step_string = f"name - {message.from_user.first_name}, id - {message.from_user.id}, user_name - @{message.from_user.username} блюдо {message.text} - поставлена стоп, в {time_write} \n"
+        with open(f'member_step/write_step{date_write}.txt', 'a', encoding='utf-8') as file:
+            try:
+                data = file.read()
+                data = step_string + data
+                file.write(data)
+            except:
+                file.write(step_string)
+        menu_ = menu_main()
+        if message.text.lower().capitalize() in values_list:
             tekst = 'Если хотите отметить что-то еще выберите нужно'
             bot.send_message(message.chat.id, tekst, reply_markup=keyb_admin())
         else:
@@ -338,8 +388,28 @@ def dish_stop(message, word):
                              f'Такого блюда нет, попробуйте заново используя эти названия {dish_tekst}',
                              reply_markup=keyb_admin())
     else:
-        dish_is_stop(message.text)
-        if message.text in values_list:
+        all_menu = menu_all()
+        values_list = []
+        for cat in all_menu.values():
+            for dish in cat:
+                print(dish)
+                values_list.append(dish[1])
+        dish_tekst = ':\n'
+        for i in values_list:
+            dish_tekst += i + '\n'
+        dish_is_stop(message.text.lower().capitalize())
+        time_write = datetime.datetime.now()
+        date_write = datetime.date.today()
+        step_string = f"name - {message.from_user.first_name}, id - {message.from_user.id}, user_name - @{message.from_user.username} блюдо {message.text} - восстановлено, в {time_write} \n"
+        with open(f'member_step/write_step{date_write}.txt', 'a', encoding='utf-8') as file:
+            try:
+                data = file.read()
+                data = step_string + data
+                file.write(data)
+            except:
+                file.write(step_string)
+        menu_ = menu_main()
+        if message.text.lower().capitalize() in values_list:
             tekst = 'Если хотите отметить что-то еще выберите нужно'
             bot.send_message(message.chat.id, tekst, reply_markup=keyb_admin())
         else:
@@ -478,13 +548,16 @@ def proverka():
             bot.send_message(data['tg_id'], 'Произошла ошибка оформите заказ заново', reply_markup=menu_cat('menu'))
             os.remove(f'orders/{order}')
 
+
 """"""
 proverka()
 
 
 @bot.callback_query_handler(func=lambda call: True)
 def query_handler(call):
+    print(call.message)
     if call.data == 'menu':
+        print(call.message)
         bot.send_message(call.from_user.id, 'Выберите категорию', reply_markup=menu_cat('menu'))
     elif call.data == 'BadComment':
         bot.send_message(call.message.chat.id, "комментарий НЕ ОПУБЛИКОВАН")

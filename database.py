@@ -520,6 +520,34 @@ def dish_is_stop(name_dish, word="run"):
 
 # print(dish_is_stop("Мороженное", "стоп"))
 
+def menu_all():
+    '''
+    :return: генерирует словарь типа {категория:[[все о блюде 1],[все о блюде 2]]}
+    '''
+    try:
+        with con:
+            data = con.execute(f'''SELECT CategoryDish.name, Dish.id,Dish.name,Dish.picture,Dish.costs,Dish.ingridients,Dish.time_of_cook
+                                    FROM CategoryDish
+                                    JOIN Dish ON 
+                                    Dish.category_id = CategoryDish.id
+                                    ''')
+            data = data.fetchall()
+            # return data
+    except Exception as e:
+        print(e)
+    menu = {}
+    for i in data:
+        if i[0] not in menu.keys():
+            a = []
+            for s in i[1:]:
+                a.append(s)
+            menu[i[0]] = [a]
+        else:
+            a = []
+            for s in i[1:]:
+                a.append(s)
+            menu[i[0]].append(a)
+    return menu
 
 def menu_main():
     '''
@@ -670,3 +698,21 @@ def find_id_user(order_id):
         print(e)
 
 # print(find_id_user(1))
+
+def show_marks():
+    '''
+    :return: генерирует словарь типа {категория:[[все о блюде 1],[все о блюде 2]]}
+    '''
+    try:
+        with con:
+            data = con.execute(f'''SELECT name,mark
+                                    FROM MarkDish
+                                    ''')
+            data = data.fetchall()
+            # return data
+    except Exception as e:
+        print(e)
+    mark ={}
+    for i in data:
+        mark[i[0]] = i[1]
+    return mark
