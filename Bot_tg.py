@@ -42,6 +42,11 @@ keyb_start_users.add(*(types.KeyboardButton('Меню'),
                        types.KeyboardButton('Мои заказы'),
                        types.KeyboardButton('Отзывы')))
 
+keyb_cancel_users = types.ReplyKeyboardMarkup(resize_keyboard=True)
+keyb_cancel_users.add(*(types.KeyboardButton('Меню'),
+                       types.KeyboardButton('Мои заказы'),
+                       types.KeyboardButton('Отзывы'),
+                       types.KeyboardButton('Отмена')))
 """Для регистрации"""
 keyb_reg = types.ReplyKeyboardMarkup(resize_keyboard=True)
 keyb_reg.add(types.KeyboardButton('Зарегистрироваться'))
@@ -183,7 +188,7 @@ def start(message):
     if message.text == '/update' and message.chat.id in id_all_dict["super_admin"]:
         menu_ = menu_main()
         bot.send_message(message.chat.id, f'Обновленная информация выглядит так {str(menu_)}')
-    if message.text == 'Запиши' and message.chat.id in id_all_dict['dostavka']:
+    if message.text.lower() == 'запиши' and message.chat.id in id_all_dict['dostavka']:
         if message.from_user.id not in id_all_dict['members_of_dostavka']:
             id_all_dict['members_of_dostavka'].append(message.from_user.id)
             with open('id_user.json', 'w', encoding='utf-8') as file:
@@ -211,6 +216,10 @@ def start(message):
                              reply_markup=keyb_admin())
     if message.text == 'Меню':
         bot.send_message(message.from_user.id, 'Выберите категорию', reply_markup=menu_cat('menu'))
+    if message.text == 'Отмена':
+        bot.send_message(message.chat.id, 'Ваш заказ прерван\n Оформите заказ заново', reply_markup=keyb_start_users)
+        order_dish[message.chat.id].clear()
+        os.remove(f'orders/{message.chat.id}.json')
     if message.text == 'Мои заказы':
         orders = show_my_orders(message.chat.id)
         for order in orders:
@@ -355,9 +364,17 @@ def new_com(message, text):
 
 
 def add_dish(message, name_dish):
-    if message.text.isdigit() and int(message.text) < 15:
+    bot.send_message(message.chat.id, 'Выбирайте', reply_markup=keyb_cancel_users)
+    if message.text.lower() in ['меню', 'мои заказы', 'отзывы']:
+        bot.send_message(message.chat.id, 'Ваш заказ прерван\n Оформите заказ заново', reply_markup=keyb_start_users)
+        order_dish[message.chat.id].clear()
+        os.remove(f'orders/{message.chat.id}.json')
+    elif message.text.isdigit() and 0 < int(message.text) < 15:
         if message.chat.id in order_dish:
             order_dish[message.chat.id]['tg_id'] = message.chat.id
+            order_dish[message.chat.id]['state'] = 'adress finish'
+            with open(f'orders/{message.from_user.id}.json', 'w', encoding='utf-8') as file:
+                json.dump(order_dish[message.from_user.id], file, ensure_ascii=False)
             if 'dishs' in order_dish[message.chat.id]:
                 order_dish[message.chat.id]['dishs'][name_dish] = int(message.text)
             else:
@@ -367,6 +384,9 @@ def add_dish(message, name_dish):
             bot.send_message(message.chat.id, 'Желаете что-то еше', reply_markup=keyb_add_dish())
         else:
             order_dish.setdefault(message.chat.id, {'tg_id': message.chat.id})
+            order_dish[message.chat.id]['state'] = 'adress finish'
+            with open(f'orders/{message.from_user.id}.json', 'w', encoding='utf-8') as file:
+                json.dump(order_dish[message.from_user.id], file, ensure_ascii=False)
             order_dish[message.chat.id].setdefault('dishs', {name_dish: int(message.text)})
             bot.delete_message(message.chat.id, message.message_id)
             bot.send_message(message.chat.id, f'Вы заказали {name_dish} - {message.text} порции')
@@ -377,7 +397,11 @@ def add_dish(message, name_dish):
 
 
 def address_dish(message):
-    if len(message.text) < 80:
+    if message.text.lower() in ['меню', 'мои заказы', 'отзывы']:
+        bot.send_message(message.chat.id, 'Ваш заказ прерван\n Оформите заказ заново', reply_markup=keyb_start_users)
+        order_dish[message.chat.id].clear()
+        os.remove(f'orders/{message.chat.id}.json')
+    elif len(message.text) < 80:
         order_dish[message.chat.id]['address'] = f'{message.text}'
         order_dish[message.chat.id]['state2'] = 'adress finish'
         with open(f'orders/{message.from_user.id}.json', 'w', encoding='utf-8') as file:
@@ -392,15 +416,20 @@ def address_dish(message):
 
 
 def comment_dish(message):
-    bot.delete_message(message.chat.id, message.message_id)
-    bot.send_message(message.chat.id, 'Ваш комментарий добавлен -  ' + message.text)
-    order_dish[message.chat.id]['comment'] = f'{message.text}'
-    order_dish[message.chat.id]['state3'] = 'comment_finish'
-    with open(f'orders/{message.from_user.id}.json', 'w', encoding='utf-8') as file:
-        json.dump(order_dish[message.from_user.id], file, ensure_ascii=False)
-    finish_set = time_costs(order_dish[message.chat.id]['dishs'])
-    bot.send_message(message.chat.id, finish_set)
-    bot.send_message(message.chat.id, 'Оформить заказ?', reply_markup=keyb_finish_order())
+    if message.text.lower() in ['меню', 'мои заказы', 'отзывы']:
+        bot.send_message(message.chat.id, 'Ваш заказ прерван\n Оформите заказ заново', reply_markup=keyb_start_users)
+        order_dish[message.chat.id].clear()
+        os.remove(f'orders/{message.chat.id}.json')
+    else:
+        bot.delete_message(message.chat.id, message.message_id)
+        bot.send_message(message.chat.id, 'Ваш комментарий добавлен -  ' + message.text)
+        order_dish[message.chat.id]['comment'] = f'{message.text}'
+        order_dish[message.chat.id]['state3'] = 'comment_finish'
+        with open(f'orders/{message.from_user.id}.json', 'w', encoding='utf-8') as file:
+            json.dump(order_dish[message.from_user.id], file, ensure_ascii=False)
+        finish_set = time_costs(order_dish[message.chat.id]['dishs'])
+        bot.send_message(message.chat.id, finish_set)
+        bot.send_message(message.chat.id, 'Оформить заказ?', reply_markup=keyb_finish_order())
 
 
 """Команда для оценки блюда"""
@@ -445,10 +474,9 @@ def proverka():
         elif 'state1' in data.keys():
             msg = bot.send_message(data['tg_id'], f'Введите адрес')
             bot.register_next_step_handler(msg, address_dish)
-        else:
+        elif 'state' in data.keys():
             bot.send_message(data['tg_id'], 'Произошла ошибка оформите заказ заново', reply_markup=menu_cat('menu'))
             os.remove(f'orders/{order}')
-
 
 """"""
 proverka()
@@ -524,18 +552,18 @@ def query_handler(call):
     elif call.data == 'finish_order':
         print(order_dish[call.message.chat.id])
         ordering(order_dish[call.message.chat.id]['dishs'], order_dish[call.message.chat.id])
-        cook = for_cook()
-        cook = list(cook)
-        bot.send_message(id_all_dict["povars"][0], str(cook))
+        os.remove(f'orders/{call.message.chat.id}.json')
+        cooks = for_cook()
         date_order = datetime.date.today()
         try:
             os.mkdir(f'orders_add/{date_order}')
         except:
             pass
-        with open(f'orders_add/{date_order}/{call.message.chat.id}___{cook}.json', 'w',
-                  encoding='utf-8') as file:
-            json.dump(list(cook), file, ensure_ascii=False)
-        os.remove(f'orders/{call.message.chat.id}.json')
+        for cook in cooks:
+            bot.send_message(id_all_dict["povars"][0], cook)
+            with open(f'orders_add/{date_order}/{call.message.chat.id}_{cook.split(":")[0]}.json', 'w',
+                      encoding='utf-8') as file:
+                json.dump(cook, file, ensure_ascii=False)
         order_dish[call.message.chat.id] = {}
         bot.send_message(call.message.chat.id, f'Ваш заказ принят\nЕсли хотите оформить еще заказ жмите меню',
                          reply_markup=keyb_start_users)

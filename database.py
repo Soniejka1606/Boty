@@ -241,7 +241,7 @@ def ordering(order_dish, order_addreess):
     return "done"
 
 
-print(ordering({"Котлета": 2, "Щи": 2}, {'address': "Лебедева8", 'tg_id': 423423423423, "comment": 'Вилки и ножи'}))
+# print(ordering({"Котлета": 2, "Щи": 2}, {'address': "Лебедева8", 'tg_id': 423423423423, "comment": 'Вилки и ножи'}))
 
 
 def time_costs(order_dish):  # Собобщение для клиента перед подтверждением заказа
@@ -341,14 +341,27 @@ def for_cook():
         for i in data:
             orders_ids.append(i[0])
         orders_ids = set(orders_ids)  # id заказов чтобы обозначить что началось готовиться
+        orders_ids = list(orders_ids)
+        orders_ids.append(2)
         orders_ids = tuple(orders_ids)
+        print(orders_ids)
         try:
-            orderdish = f"UPDATE Orders SET is_start_cook = 1 WHERE Id IN {orders_ids}"
+            orderdish = f"UPDATE Orders SET is_start_cook = 1 WHERE Id in {orders_ids}"
             with con:
                 con.execute(orderdish)
         except Exception as e:
             print("Ошибка: ", e)
-        return data
+        kartoczka = []
+        dict_ = {}
+        for i in data:
+            if i[0] not in dict_.keys():
+                dict_[i[0]] = f'Блюдо: {i[1]} в количестве {i[2]} шт.\n'
+            else:
+                dict_[i[0]] += f'Блюдо: {i[1]} в количестве {i[2]} шт.\n'
+        for k, v in dict_.items():
+            kartoczka.append(f'Заказ номер - {k}:\n{v} ')
+
+        return kartoczka
 
 
 # print(for_cook())
