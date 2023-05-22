@@ -139,7 +139,7 @@ def set_mark(dict_):  # принимает словарь на оценку бл
 # print(set_mark({'dish_name': 'мороженное','mark':5}))
 
 def registration(dict_):
-    print(dict_)
+    # print(dict_)
     #  функция принимает в качестве аргумента словарь со значениями, возвращает TRUE при успехе или ошибку при ошибке
     """
     :param Словарь:
@@ -344,7 +344,7 @@ def for_cook():
         orders_ids = list(orders_ids)
         orders_ids.append(2)
         orders_ids = tuple(orders_ids)
-        print(orders_ids)
+        # print(orders_ids)
         try:
             orderdish = f"UPDATE Orders SET is_start_cook = 1 WHERE Id in {orders_ids}"
             with con:
