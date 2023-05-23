@@ -716,3 +716,5 @@ def show_marks():
     for i in data:
         mark[i[0]] = i[1]
     return mark
+
+check_same_thread = False
