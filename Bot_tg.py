@@ -153,6 +153,8 @@ def dishs(category, message_id, val):
 
 """Admin"""
 
+def otpravka (cook):
+    bot.send_message(-813101250, cook)
 
 def next1(name=0, d=0):
     next1 = types.InlineKeyboardMarkup()
@@ -914,6 +916,9 @@ def query_handler(call):
         bot.send_message(call.from_user.id, d)
         bot.send_message(id_all_dict["super_admin"][0], d + f' заказчиком - @{call.from_user.username}')
         bot.delete_message(call.from_user.id, call.message.message_id)
+
+def send_to_povar(text):
+    bot.send_message(-813101250,text)
 
 
 print("Ready")

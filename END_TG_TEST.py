@@ -153,6 +153,8 @@ def dishs(category, message_id, val):
 
 """Admin"""
 
+def otpravka (cook):
+    bot.send_message(-813101250, cook)
 
 def next1(name=0, d=0):
     next1 = types.InlineKeyboardMarkup()
