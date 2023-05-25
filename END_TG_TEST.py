@@ -883,42 +883,64 @@ def query_handler(call):
         msg = bot.send_message(call.message.chat.id, f'Поставте оценку от 1 до 5')
         bot.register_next_step_handler(msg, dish_rating, call.data[1:])
     elif int(call.data) in range(1500) and call.message.chat.id in id_all_dict['dostavka']:
-        a = call.message.text
-        keyb22 = types.InlineKeyboardMarkup()
-        b1 = types.InlineKeyboardButton(text="Доставленно", callback_data=a.split()[3])
-        keyb22.add(b1)
-        bot.send_message(call.from_user.id, a, reply_markup=keyb22)
-        # new
-        for_user = (find_id_user(a.split()[3]))
-        bot.send_message(for_user, 'Ваш заказ принят доставщиком - ' + '@' + call.from_user.username)
-        # new
-        d = call.message.text + '\n' + 'Заказ принят доставщиком - ' + '@' + call.from_user.username
-        bot.send_message(call.message.chat.id, d)
+        try:
+            a = call.message.text
+            keyb22 = types.InlineKeyboardMarkup()
+            b1 = types.InlineKeyboardButton(text="Доставленно", callback_data=a.split()[3])
+            keyb22.add(b1)
+            bot.send_message(call.from_user.id, a, reply_markup=keyb22)
+            # new
+            for_user = (find_id_user(a.split()[3]))
+            bot.send_message(for_user, 'Ваш заказ принят доставщиком - ' + '@' + call.from_user.username)
+            # new
+            d = call.message.text + '\n' + 'Заказ принят доставщиком - ' + '@' + call.from_user.username
+            bot.send_message(call.message.chat.id, d)
 
-        bot.delete_message(call.message.chat.id, call.message.message_id)
+            bot.delete_message(call.message.chat.id, call.message.message_id)
+        except:
+            d = call.message.text + '\n' + 'Заказ принят доставщиком - ' + '@' + call.from_user.username
+            bot.send_message(call.message.chat.id, d)
+            a = call.message.text
+            adress = find_id_user_vk(a.split()[3])
+            text = 'Ваш аказ принят доставщиком - ' + '@' + call.from_user.username+ '\nОжидайте'
+            from mess_to_vk import send_mess
+            send_mess(adress,text)
+            bot.delete_message(call.message.chat.id, call.message.message_id)
 
     elif int(call.data) in range(1500) and call.from_user.id in id_all_dict['members_of_dostavka']:
-        # функция что доставленно из базы данных
-        # print(f'number ===== {call.data}')
-        keyb22 = types.InlineKeyboardMarkup()
-        b1 = types.InlineKeyboardButton(text="Да", callback_data='Хочу коммент')
-        keyb22.add(b1)
-        b1 = types.InlineKeyboardButton(text="Нет", callback_data='Не хочу коммент')
-        keyb22.add(b1)
-        b = call.message.text
-        b = b.split()[3]
-        adress = find_id_user(b)
-        bot.send_message(adress, "Ваш заказ доставлен. Приятного аппетита!\nХотите оставить комментарий?", reply_markup=keyb22)
-        bot.send_message(adress, "Также Вы можете оценить блюдо, жмите кнопку внизу",reply_markup=keyb_rait)
-        is_done(int(call.data))
-        # new
-        d = call.message.text + '\n' + 'ЗАКАЗ ДОСТАВЛЕН'
-        bot.send_message(call.from_user.id, d)
-        bot.send_message(id_all_dict["super_admin"][0], d + f' заказчиком - @{call.from_user.username}')
-        bot.delete_message(call.from_user.id, call.message.message_id)
+        try:
+            # функция что доставленно из базы данных
+            # print(f'number ===== {call.data}')
+            keyb22 = types.InlineKeyboardMarkup()
+            b1 = types.InlineKeyboardButton(text="Да", callback_data='Хочу коммент')
+            keyb22.add(b1)
+            b1 = types.InlineKeyboardButton(text="Нет", callback_data='Не хочу коммент')
+            keyb22.add(b1)
+            b = call.message.text
+            b = b.split()[3]
+            adress = find_id_user(b)
+            bot.send_message(adress, "Ваш заказ доставлен. Приятного аппетита!\nХотите оставить комментарий?", reply_markup=keyb22)
+            bot.send_message(adress, "Также Вы можете оценить блюдо, жмите кнопку внизу",reply_markup=keyb_rait)
+            is_done(int(call.data))
+            # new
+            d = call.message.text + '\n' + 'ЗАКАЗ ДОСТАВЛЕН'
+            bot.send_message(call.from_user.id, d)
+            bot.send_message(id_all_dict["super_admin"][0], d + f' заказчиком - @{call.from_user.username}')
+            bot.delete_message(call.from_user.id, call.message.message_id)
+        except:
+            d = call.message.text + '\n' + 'ЗАКАЗ ДОСТАВЛЕН'
+            bot.send_message(id_all_dict["super_admin"][0], d + f' заказчиком - @{call.from_user.username}')
+            b = call.message.text
+            b = b.split()[3]
+            adress = find_id_user_vk(b)
+            print(adress)
+            from mess_to_vk import comment_after_order
+            comment_after_order(adress)
+            d = call.message.text + '\n' + 'ЗАКАЗ ДОСТАВЛЕН'
+            bot.send_message(call.from_user.id, d)
+            bot.delete_message(call.from_user.id, call.message.message_id)
 
-def send_to_povar(text):
-    bot.send_message(-813101250,text)
+
 
 
 print("Ready")

@@ -187,7 +187,7 @@ def ordering(order_dish, order_addreess):
             return False
     else:
         try:
-            data = con.execute(f"SELECT id FROM User WHERE tg_id={order_addreess['vk_id']}")
+            data = con.execute(f"SELECT id FROM User WHERE vk_id={order_addreess['vk_id']}")
             data = data.fetchall()
             user_id = 0
             for i in data:
@@ -392,6 +392,7 @@ def for_dostavka(order_id):
                                             Dish.id = Order_dish.dish_id
                                             WHERE Orders.id = {order_id}''')
             data = data.fetchall()
+            print(f"data ====== {data}")
 
     except Exception as e:
         print(e)
@@ -428,7 +429,7 @@ def for_dostavka(order_id):
     return data_text
 
 
-# print(for_dostavka(2))
+print(for_dostavka(158))
 
 
 def is_done(order_id):
@@ -718,3 +719,16 @@ def show_marks():
     return mark
 
 check_same_thread = False
+
+def find_id_user_vk(order_id):
+    try:
+        with con:
+            data = con.execute(f'''SELECT vk_id FROM User
+                                            JOIN Orders ON
+                                            User.id = Orders.user_id
+                                                WHERE Orders.id = {order_id}''')
+            data = data.fetchall()
+            a = data[0][0]
+        return a
+    except Exception as e:
+        print(e)
