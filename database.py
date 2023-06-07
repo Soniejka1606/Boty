@@ -718,7 +718,7 @@ def show_marks():
         mark[i[0]] = i[1]
     return mark
 
-check_same_thread = False
+
 
 def find_id_user_vk(order_id):
     try:
